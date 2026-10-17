@@ -10,7 +10,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://embed.typeform.com/next/embed.js" async></script>
 <style>
   :root{
     --blu:#1A56A0; --blu-scuro:#0D2D5E; --bianco:#FFFFFF;
@@ -87,6 +86,26 @@
   .nascosto{display:none}
   footer{font-size:13px;color:var(--soft);padding:0 0 30px}
   .logo img{height:30px;display:block}
+  .tf-overlay{position:fixed;inset:0;z-index:1000;background:rgba(13,45,94,.55);display:none;align-items:center;justify-content:center;padding:16px}
+  .tf-overlay.aperto{display:flex}
+  .tf-overlay.in-iframe{position:absolute;inset:auto 0 auto 0;align-items:flex-start;height:auto;min-height:100%}
+  .guida{margin-top:14px;border:1px solid var(--bordo);border-radius:12px;padding:0 16px;background:#FAFCFE}
+  .guida summary{cursor:pointer;font-weight:600;color:var(--blu);padding:12px 0;list-style:none}
+  .guida summary::-webkit-details-marker{display:none}
+  .guida summary::before{content:"+ ";font-weight:700}
+  .guida[open] summary::before{content:"− "}
+  .guida h3{font-size:16px;margin:14px 0 6px}
+  .guida p,.guida li{font-size:15px;color:var(--testo)}
+  .guida ul{padding-left:20px;margin:6px 0 10px}
+  .guida table{min-width:0;font-size:13px;margin:6px 0 12px}
+  .guida th{position:static}
+  .guida .formati{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .guida .box-ia{background:#EEF4FB;border-radius:10px;padding:14px 16px;margin:6px 0 16px}
+  .guida .box-ia p{margin:0 0 10px}
+  .tf-box{position:relative;background:#fff;border-radius:16px;width:min(720px,100%);height:min(640px,100%);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .tf-box iframe{border:0;width:100%;height:100%}
+  .tf-chiudi{position:absolute;top:10px;right:10px;z-index:2;width:40px;height:40px;border-radius:50%;border:0;background:var(--blu);color:#fff;font-size:22px;line-height:1;cursor:pointer}
+  .tf-link{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:12px}
   .riga-cap td{background:#E6EEF8;color:var(--blu-scuro);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.02em}
   .ricarico{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:12px}
   .ricarico label{display:flex;align-items:center;gap:6px;margin:0;font-weight:500;color:var(--testo)}
@@ -132,6 +151,44 @@
     </label>
     <input type="file" id="file" accept=".xlsx,.xls,.ods,.csv" class="nascosto">
     <div class="stato" id="stato-file"></div>
+
+    <details class="guida" id="guida">
+      <summary>Come deve essere il file Excel?</summary>
+      <p>La demo legge due tipi di computo. Le colonne le riconosce da sola dai nomi dell'intestazione; se sbaglia, al passo 3 puoi indicarle tu.</p>
+      <div class="formati">
+        <div>
+          <h3>1. Elenco semplice: una riga per voce</h3>
+          <table>
+            <thead><tr><th>Codice</th><th>Descrizione</th><th>U.M.</th><th>Quantità</th></tr></thead>
+            <tbody>
+              <tr><td>VEN26-01.13.02.00</td><td>Massetto in sabbia e cemento</td><td>m²</td><td>65</td></tr>
+              <tr><td></td><td>Pavimento in gres porcellanato 60x60</td><td>m²</td><td>65</td></tr>
+            </tbody>
+          </table>
+          <ul>
+            <li><b>Descrizione</b> e <b>Quantità</b> sono obbligatorie.</li>
+            <li><b>Codice</b> e <b>U.M.</b> sono facoltativi, ma con il codice del prezzario la voce si trova in modo esatto.</li>
+            <li>Le righe senza quantità, come i titoli dei capitoli, vengono saltate.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>2. Computo con libretto delle misure</h3>
+          <p>È il formato che esce dai programmi di contabilità come PriMus: per ogni voce c'è la riga con il codice, le righe di misura e la riga «Totale codice» con unità di misura e quantità. La demo lo riconosce da sola, usa i totali, salta le misure e tiene i capitoli.</p>
+        </div>
+      </div>
+      <h3>Qualche accorgimento</h3>
+      <ul>
+        <li>Le quantità devono essere numeri, non testo (va bene sia 12,5 che 12.5).</li>
+        <li>Se il file ha più fogli, al passo 3 scegli quello del computo.</li>
+        <li>Evita celle unite nelle colonne di descrizione e quantità.</li>
+        <li>Usa il codice del prezzario della Regione che scegli al passo 1.</li>
+      </ul>
+      <p><button type="button" class="btn btn-contorno btn-mini" id="btn-modello">Scarica il modello Excel</button></p>
+      <div class="box-ia">
+        <p><b>Il tuo computo ha un formato diverso?</b> Questa demo legge solo i due formati qui sopra. Nella versione completa di ReporTech addestriamo l'IA a leggere i computi nel formato che usate voi, anche in PDF, così non dovete sistemare il file prima di caricarlo.</p>
+        <button type="button" class="btn btn-pieno btn-mini apri-demo">Prenota una demo con un tuo computo</button>
+      </div>
+    </details>
   </section>
 
   <!-- PASSO 3 -->
@@ -206,6 +263,14 @@
 
   <footer>I prezzi mostrati vengono dai prezzari regionali ufficiali indicati per ogni Regione. Controlla sempre le voci prima di inviare un preventivo.</footer>
 </main>
+
+<div class="tf-overlay" id="tf-overlay" role="dialog" aria-modal="true" aria-label="Prenota una demo">
+  <div class="tf-box">
+    <button class="tf-chiudi" id="tf-chiudi" aria-label="Chiudi">×</button>
+    <iframe id="tf-frame" title="Prenota una demo ReporTech" allow="camera; microphone; autoplay; encrypted-media; fullscreen"></iframe>
+    <div class="tf-link"><a id="tf-nuova" href="#" target="_blank" rel="noopener">Il modulo non si vede? Aprilo in una nuova scheda</a></div>
+  </div>
+</div>
 
 <script>
 /* =====================================================================
@@ -613,7 +678,7 @@ $("btn-abbina").addEventListener("click", ()=>{
     }
   }
   if(!righeComputo.length){
-    $("stato-col").className="stato err"; $("stato-col").textContent="Non ho trovato righe con descrizione e quantità. Controlla le colonne."; return;
+    $("stato-col").className="stato err"; $("stato-col").textContent="Non ho trovato righe con descrizione e quantità. Controlla le colonne o guarda «Come deve essere il file Excel?» al passo 2."; $("guida").open = true; return;
   }
   abbina();
 });
@@ -758,14 +823,43 @@ const CONTATTI = {
   azienda:"Tech Solutions · P.IVA 05492550263 · Conegliano (TV)"
 };
 const TYPEFORM_ID = "ltpsjxe6";
-// Il pulsante apre la finestra di Typeform direttamente qui. Se Typeform non si carica, apre il modulo in una nuova scheda.
-document.querySelectorAll(".apri-demo").forEach(b=>b.addEventListener("click", ()=>{
-  if(window.tf && window.tf.createPopup){
-    window.tf.createPopup(TYPEFORM_ID, {size:80, medium:"preventivatore-demo"}).open();
-  }else{
-    window.open("https://form.typeform.com/to/"+TYPEFORM_ID+"?typeform-medium=preventivatore-demo","_blank","noopener");
+// Il pulsante apre il modulo Typeform in una finestra sopra la pagina (iframe semplice, senza librerie esterne).
+const TYPEFORM_URL = "https://form.typeform.com/to/"+TYPEFORM_ID+"?typeform-medium=preventivatore-demo&typeform-embed=popup-blank";
+const DENTRO_IFRAME = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
+$("tf-nuova").href = TYPEFORM_URL.replace("popup-blank","new-tab");
+function apriDemo(ev){
+  // Dentro Wix la pagina è in un riquadro alto: una finestra "fissa" finirebbe fuori vista.
+  // Per questo, se siamo dentro un riquadro, apriamo il modulo in una nuova scheda.
+  if(DENTRO_IFRAME){
+    window.open(TYPEFORM_URL.replace("popup-blank","new-tab"), "_blank", "noopener");
+    return;
   }
-}));
+  const f = $("tf-frame");
+  if(!f.src) f.src = TYPEFORM_URL;
+  $("tf-overlay").classList.add("aperto");
+}
+function chiudiDemo(){ $("tf-overlay").classList.remove("aperto"); }
+document.querySelectorAll(".apri-demo").forEach(b=>b.addEventListener("click", apriDemo));
+$("tf-chiudi").addEventListener("click", chiudiDemo);
+$("tf-overlay").addEventListener("click", e=>{ if(e.target.id==="tf-overlay") chiudiDemo(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") chiudiDemo(); });
+
+$("btn-modello").addEventListener("click", ()=>{
+  const aoa = [
+    ["Codice","Descrizione","U.M.","Quantità"],
+    ["","DEMOLIZIONI","",""],
+    ["","Demolizione di tramezzi in laterizio","m²",18],
+    ["","Rimozione di rivestimento in piastrelle","m²",30],
+    ["","PAVIMENTI","",""],
+    ["","Massetto in sabbia e cemento","m²",65],
+    ["","Pavimento in gres porcellanato 60x60","m²",65],
+    ["","Battiscopa in gres porcellanato","m",48]
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = [{wch:22},{wch:60},{wch:8},{wch:10}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Computo");
+  try{ XLSX.writeFile(wb, "modello-computo-reportech.xlsx"); }catch(e){}
+});
 
 function datiIntestazione(){
   return {impresa:$("int-impresa").value.trim(), cliente:$("int-cliente").value.trim(), oggetto:$("int-oggetto").value.trim()};
