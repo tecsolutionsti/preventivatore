@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preventivatore ReporTech, demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inclusive+Sans:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --blu:#1A56A0; --blu-scuro:#0D2D5E; --bianco:#FFFFFF;
+    --bg:#F4F7FB; --bordo:#DCE4EF; --testo:#1B2533; --soft:#5A6878;
+    --verde:#1F8A5B; --verde-bg:#E7F5EE; --giallo:#8A5A00; --giallo-bg:#FFF4DB; --rosso:#B42318;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--testo);font-family:Inter,Arial,sans-serif;font-size:16px;line-height:1.55}
+  h1,h2,h3{font-family:"Inclusive Sans",Inter,Arial,sans-serif;color:var(--blu-scuro);line-height:1.2;margin:0 0 .4em}
+  h1{font-size:clamp(26px,4vw,38px)}
+  h2{font-size:21px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+  header{background:var(--bianco);border-bottom:1px solid var(--bordo)}
+  .barra{display:flex;align-items:center;justify-content:space-between;height:60px}
+  .logo{font-family:"Inclusive Sans",Inter,sans-serif;font-weight:700;font-size:21px;color:var(--blu);text-decoration:none}
+  .avviso{background:var(--blu-scuro);color:var(--bianco);font-size:15px}
+  .avviso .wrap{padding-top:12px;padding-bottom:12px}
+  .avviso strong{color:#fff}
+  .intro{padding:28px 0 8px}
+  .intro p{color:var(--soft);max-width:760px;margin:0}
+  .passo{background:var(--bianco);border:1px solid var(--bordo);border-radius:14px;padding:20px;margin:18px 0}
+  .passo-titolo{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .num{width:32px;height:32px;flex:none;border-radius:50%;background:var(--blu);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .passo.spento{opacity:.5;pointer-events:none}
+  label{font-weight:600;font-size:14px;color:var(--blu-scuro);display:block;margin-bottom:4px}
+  select,input[type=number],input[type=text]{font-family:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--bordo);border-radius:8px;background:#fff;color:var(--testo)}
+  select:focus,input:focus{outline:2px solid var(--blu);border-color:var(--blu)}
+  .regioni{display:flex;flex-wrap:wrap;gap:8px}
+  .regione{border:2px solid var(--bordo);background:#fff;border-radius:10px;padding:10px 16px;font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;color:var(--testo)}
+  .regione.attiva{border-color:var(--blu);background:#EEF4FB;color:var(--blu)}
+  .drop{border:2px dashed var(--bordo);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;background:#FAFCFE}
+  .drop.sopra{border-color:var(--blu);background:#EEF4FB}
+  .drop strong{color:var(--blu)}
+  .drop small{display:block;color:var(--soft);margin-top:6px}
+  .stato{margin-top:10px;font-size:14px;color:var(--soft)}
+  .stato.ok{color:var(--verde)} .stato.err{color:var(--rosso)}
+  .colonne{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:6px}
+  .colonne select{width:100%}
+  .btn{display:inline-block;font-family:inherit;font-weight:600;font-size:15px;border-radius:10px;padding:12px 18px;border:2px solid var(--blu);cursor:pointer;text-decoration:none}
+  .btn-pieno{background:var(--blu);color:#fff}
+  .btn-pieno:hover{background:var(--blu-scuro);border-color:var(--blu-scuro)}
+  .btn-contorno{background:#fff;color:var(--blu)}
+  .btn-contorno:hover{background:#EEF4FB}
+  .btn-mini{font-size:13px;padding:6px 10px;border-radius:8px;border-width:1px}
+  .azioni{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:center}
+  .riassunto{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 14px}
+  .chip{font-size:13px;padding:4px 10px;border-radius:99px;background:var(--bg);color:var(--soft);font-weight:600}
+  .chip.verde{background:var(--verde-bg);color:var(--verde)}
+  .chip.giallo{background:var(--giallo-bg);color:var(--giallo)}
+  .tab-wrap{overflow-x:auto;border:1px solid var(--bordo);border-radius:12px}
+  table{border-collapse:collapse;width:100%;min-width:980px;font-size:14px;background:#fff}
+  th,td{padding:10px;border-bottom:1px solid var(--bordo);vertical-align:top;text-align:left}
+  th{background:var(--blu-scuro);color:#fff;font-weight:600;font-size:13px;position:sticky;top:0}
+  td.n,th.n{text-align:right;white-space:nowrap}
+  .desc{max-width:300px}
+  .desc .cod{font-size:12px;color:var(--soft);display:block}
+  .clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .clamp.aperto{-webkit-line-clamp:unset}
+  .match select{width:100%;max-width:330px;font-size:13px;padding:7px}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;margin-bottom:5px}
+  .badge.codice{background:var(--verde-bg);color:var(--verde)}
+  .badge.simile{background:var(--giallo-bg);color:var(--giallo)}
+  .badge.nessuna{background:#FDECEA;color:var(--rosso)}
+  .match .testo-voce{font-size:12px;color:var(--soft);margin-top:4px;max-width:330px}
+  td input[type=number]{width:110px;text-align:right;padding:7px 8px;font-size:14px}
+  .totali{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:16px}
+  .tot{background:var(--bg);border-radius:12px;padding:14px 16px}
+  .tot span{display:block;font-size:13px;color:var(--soft)}
+  .tot strong{font-family:"Inclusive Sans",Inter,sans-serif;font-size:26px;color:var(--blu-scuro)}
+  .tot.princ{background:var(--blu-scuro)}
+  .tot.princ span{color:#D5E0EF} .tot.princ strong{color:#fff}
+  .cta{background:var(--bianco);border:2px solid var(--blu);border-radius:14px;padding:22px;margin:24px 0 40px}
+  .cta p{color:var(--soft);margin:0 0 14px}
+  .nascosto{display:none}
+  footer{font-size:13px;color:var(--soft);padding:0 0 30px}
+  .logo img{height:30px;display:block}
+  .tf-overlay{position:fixed;inset:0;z-index:1000;background:rgba(13,45,94,.55);display:none;align-items:center;justify-content:center;padding:16px}
+  .tf-overlay.aperto{display:flex}
+  .tf-overlay.in-iframe{position:absolute;inset:auto 0 auto 0;align-items:flex-start;height:auto;min-height:100%}
+  .guida{margin-top:14px;border:1px solid var(--bordo);border-radius:12px;padding:0 16px;background:#FAFCFE}
+  .guida summary{cursor:pointer;font-weight:600;color:var(--blu);padding:12px 0;list-style:none}
+  .guida summary::-webkit-details-marker{display:none}
+  .guida summary::before{content:"+ ";font-weight:700}
+  .guida[open] summary::before{content:"− "}
+  .guida h3{font-size:16px;margin:14px 0 6px}
+  .guida p,.guida li{font-size:15px;color:var(--testo)}
+  .guida ul{padding-left:20px;margin:6px 0 10px}
+  .guida table{min-width:0;font-size:13px;margin:6px 0 12px}
+  .guida th{position:static}
+  .guida .formati{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .guida .box-ia{background:#EEF4FB;border-radius:10px;padding:14px 16px;margin:6px 0 16px}
+  .guida .box-ia p{margin:0 0 10px}
+  .tf-box{position:relative;background:#fff;border-radius:16px;width:min(720px,100%);height:min(640px,100%);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .tf-box iframe{border:0;width:100%;height:100%}
+  .tf-chiudi{position:absolute;top:10px;right:10px;z-index:2;width:40px;height:40px;border-radius:50%;border:0;background:var(--blu);color:#fff;font-size:22px;line-height:1;cursor:pointer}
+  .tf-link{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:12px}
+  .riga-cap td{background:#E6EEF8;color:var(--blu-scuro);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.02em}
+  .ricarico{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end;margin-top:14px;padding:12px 14px;background:var(--bg);border-radius:12px}
+  .ricarico label{display:flex;align-items:center;gap:6px;margin:0;font-weight:500;color:var(--testo)}
+  .intestazione{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:20px;padding-top:16px;border-top:1px solid var(--bordo)}
+  .intestazione input{width:100%}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap barra">
+    <a class="logo" href="https://www.reportech.app" target="_blank" rel="noopener"><img src="logo-reportech.png" alt="ReporTech"></a>
+    <button class="btn btn-pieno btn-mini apri-demo">Prenota una demo</button>
+  </div>
+</header>
+
+<div class="avviso">
+  <div class="wrap">
+    <strong>Versione demo: carica il computo in Excel.</strong>
+    Nella versione completa di ReporTech puoi caricare anche i computi in PDF, che l'IA legge e importa da sola.
+  </div>
+</div>
+
+<main class="wrap">
+  <section class="intro">
+    <h1>Prova il preventivatore con il tuo computo</h1>
+    <p>Scegli la Regione e carica il computo Excel che hai ricevuto. ReporTech cerca ogni voce nel prezzario regionale e ti mostra il prezzo. Poi scrivi tu il prezzo finale che vuoi usare nel preventivo. Il file resta sul tuo computer: non lo inviamo a nessuno.</p>
+  </section>
+
+  <!-- PASSO 1 -->
+  <section class="passo" id="p1">
+    <div class="passo-titolo"><div class="num">1</div><h2>Scegli il prezzario regionale</h2></div>
+    <div class="regioni" id="regioni"></div>
+    <div class="stato" id="stato-prezzario">Nessun prezzario scelto.</div>
+  </section>
+
+  <!-- PASSO 2 -->
+  <section class="passo spento" id="p2">
+    <div class="passo-titolo"><div class="num">2</div><h2>Carica il computo in Excel</h2></div>
+    <label class="drop" id="drop" for="file">
+      <strong>Trascina qui il file</strong> oppure tocca per sceglierlo
+      <small>Formati .xlsx, .xls, .ods o .csv</small>
+    </label>
+    <input type="file" id="file" accept=".xlsx,.xls,.ods,.csv" class="nascosto">
+    <div class="stato" id="stato-file"></div>
+
+    <details class="guida" id="guida">
+      <summary>Come deve essere il file Excel?</summary>
+      <p>La demo legge due tipi di computo. Le colonne le riconosce da sola dai nomi dell'intestazione; se sbaglia, al passo 3 puoi indicarle tu.</p>
+      <div class="formati">
+        <div>
+          <h3>1. Elenco semplice: una riga per voce</h3>
+          <table>
+            <thead><tr><th>Codice</th><th>Descrizione</th><th>U.M.</th><th>Quantità</th></tr></thead>
+            <tbody>
+              <tr><td>VEN26-01.13.02.00</td><td>Massetto in sabbia e cemento</td><td>m²</td><td>65</td></tr>
+              <tr><td></td><td>Pavimento in gres porcellanato 60x60</td><td>m²</td><td>65</td></tr>
+            </tbody>
+          </table>
+          <ul>
+            <li><b>Descrizione</b> e <b>Quantità</b> sono obbligatorie.</li>
+            <li><b>Codice</b> e <b>U.M.</b> sono facoltativi, ma con il codice del prezzario la voce si trova in modo esatto.</li>
+            <li>Le righe senza quantità, come i titoli dei capitoli, vengono saltate.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>2. Computo con libretto delle misure</h3>
+          <p>È il formato che esce dai programmi di contabilità come PriMus: per ogni voce c'è la riga con il codice, le righe di misura e la riga «Totale codice» con unità di misura e quantità. La demo lo riconosce da sola, usa i totali, salta le misure e tiene i capitoli.</p>
+        </div>
+      </div>
+      <h3>Qualche accorgimento</h3>
+      <ul>
+        <li>Le quantità devono essere numeri, non testo (va bene sia 12,5 che 12.5).</li>
+        <li>Se il file ha più fogli, al passo 3 scegli quello del computo.</li>
+        <li>Evita celle unite nelle colonne di descrizione e quantità.</li>
+        <li>Usa il codice del prezzario della Regione che scegli al passo 1.</li>
+      </ul>
+      <p><button type="button" class="btn btn-contorno btn-mini" id="btn-modello">Scarica il modello Excel</button></p>
+      <div class="box-ia">
+        <p><b>Il tuo computo ha un formato diverso?</b> Questa demo legge solo i due formati qui sopra. Nella versione completa di ReporTech addestriamo l'IA a leggere i computi nel formato che usate voi, anche in PDF, così non dovete sistemare il file prima di caricarlo.</p>
+        <button type="button" class="btn btn-pieno btn-mini apri-demo">Prenota una demo con un tuo computo</button>
+      </div>
+    </details>
+  </section>
+
+  <!-- PASSO 3 -->
+  <section class="passo spento" id="p3">
+    <div class="passo-titolo"><div class="num">3</div><h2>Controlla le colonne</h2></div>
+    <p style="margin:0 0 10px;color:var(--soft);font-size:15px">Abbiamo cercato da soli le colonne del computo. Se una è sbagliata, cambiala qui.</p>
+    <div class="colonne">
+      <div><label for="sel-foglio">Foglio</label><select id="sel-foglio"></select></div>
+      <div><label for="col-codice">Codice voce</label><select id="col-codice"></select></div>
+      <div><label for="col-desc">Descrizione</label><select id="col-desc"></select></div>
+      <div><label for="col-um">Unità di misura</label><select id="col-um"></select></div>
+      <div><label for="col-qta">Quantità</label><select id="col-qta"></select></div>
+    </div>
+    <div class="azioni">
+      <button class="btn btn-pieno" id="btn-abbina">Cerca le voci nel prezzario</button>
+      <span class="stato" id="stato-col" style="margin:0"></span>
+    </div>
+  </section>
+
+  <!-- PASSO 4 -->
+  <section class="passo spento" id="p4">
+    <div class="passo-titolo"><div class="num">4</div><h2>Scegli i prezzi del preventivo</h2></div>
+    <div class="riassunto" id="riassunto"></div>
+    <div class="azioni" style="margin:0 0 14px">
+      <button class="btn btn-contorno btn-mini" id="btn-copia-tutti">Usa il prezzo del prezzario dove il prezzo finale è vuoto</button>
+    </div>
+    <div class="tab-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Voce del computo</th>
+            <th>U.M.</th>
+            <th class="n">Quantità</th>
+            <th>Voce trovata nel prezzario</th>
+            <th class="n">Prezzo prezzario</th>
+            <th class="n">Il tuo prezzo</th>
+            <th class="n">Importo</th>
+          </tr>
+        </thead>
+        <tbody id="righe"></tbody>
+      </table>
+    </div>
+    <div class="ricarico">
+      <label for="perc">Ricarico o ribasso sul prezzario
+        <input type="number" id="perc" value="0" step="0.5" style="width:80px;padding:6px 8px;font-size:14px"> %
+      </label>
+      <button class="btn btn-contorno btn-mini" id="btn-applica-perc">Applica a tutte le voci</button>
+    </div>
+    <div class="totali">
+      <div class="tot"><span>Totale a prezzi del prezzario</span><strong id="tot-prezzario">0 €</strong></div>
+      <div class="tot princ"><span>Totale del tuo preventivo</span><strong id="tot-prev">0 €</strong></div>
+      <div class="tot"><span>Differenza rispetto al prezzario</span><strong id="tot-diff">0 €</strong></div>
+    </div>
+    <div class="intestazione">
+      <div><label for="int-impresa">La tua impresa (facoltativo)</label><input type="text" id="int-impresa" placeholder="Es. Rossi Costruzioni srl"></div>
+      <div><label for="int-cliente">Cliente (facoltativo)</label><input type="text" id="int-cliente" placeholder="Es. Mario Bianchi"></div>
+      <div><label for="int-oggetto">Lavori / cantiere (facoltativo)</label><input type="text" id="int-oggetto" placeholder="Es. Ristrutturazione bagno, via Roma 12"></div>
+    </div>
+    <div class="azioni">
+      <button class="btn btn-pieno" id="btn-pdf">Scarica il preventivo in PDF</button>
+      <button class="btn btn-contorno" id="btn-export">Scarica in Excel</button>
+      <span class="stato" id="stato-export" style="margin:0"></span>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2>Vuoi usarlo sui tuoi preventivi veri?</h2>
+    <p>In ReporTech carichi anche i computi in PDF, usi il tuo listino accanto al prezzario e, quando il cliente accetta, il preventivo diventa la commessa con rapportini e SAL.</p>
+    <button class="btn btn-pieno apri-demo">Prenota una demo</button>
+  </section>
+
+  <footer>I prezzi mostrati vengono dai prezzari regionali ufficiali indicati per ogni Regione. Controlla sempre le voci prima di inviare un preventivo.</footer>
+</main>
+
+<div class="tf-overlay" id="tf-overlay" role="dialog" aria-modal="true" aria-label="Prenota una demo">
+  <div class="tf-box">
+    <button class="tf-chiudi" id="tf-chiudi" aria-label="Chiudi">×</button>
+    <iframe id="tf-frame" title="Prenota una demo ReporTech" allow="camera; microphone; autoplay; encrypted-media; fullscreen"></iframe>
+    <div class="tf-link"><a id="tf-nuova" href="#" target="_blank" rel="noopener">Il modulo non si vede? Aprilo in una nuova scheda</a></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   CONFIGURAZIONE PREZZARI
+   Per ogni Regione metti l'URL del file JSON del prezzario.
+   Formato del JSON:
+   { "regione":"Veneto", "edizione":"2026", "fonte":"DGR n. 486 del 09/06/2026",
+     "voci":[ ["CODICE","Descrizione","UM",12.34], ... ] }
+   Se l'URL è vuoto la demo usa il prezzario di prova qui sotto.
+   ===================================================================== */
+const PREZZARI = {
+  veneto:   {nome:"Veneto",               url:"prezzario-veneto-2026.json"},
+  lombardia:{nome:"Lombardia",            url:"prezzario-lombardia-2026.json"},
+  fvg:      {nome:"Friuli Venezia Giulia",url:"prezzario-fvg-2026.json"},
+  piemonte: {nome:"Piemonte",             url:"prezzario-piemonte-2026.json"},
+  emilia:   {nome:"Emilia-Romagna",       url:"prezzario-emilia-romagna-2026.json"}
+};
+
+/* Prezzario di prova: voci e prezzi INVENTATI, solo per testare la pagina */
+const PREZZARIO_PROVA = {
+  regione:"Prova", edizione:"dati inventati", fonte:"Prezzario di prova, non usare per preventivi",
+  voci:[
+    ["PROVA.01.001","Demolizione di pavimento in piastrelle di ceramica o gres, compreso il sottofondo fino a 5 cm, carico e trasporto a discarica escluso","m²",18.50],
+    ["PROVA.01.002","Rimozione di rivestimento in piastrelle su pareti interne, compresa la malta di allettamento","m²",14.20],
+    ["PROVA.01.003","Demolizione di tramezzi in laterizio forato spessore fino a 12 cm","m²",22.80],
+    ["PROVA.01.004","Trasporto e conferimento a discarica autorizzata di materiale da demolizione","t",38.00],
+    ["PROVA.02.001","Massetto in sabbia e cemento per sottofondo pavimenti, spessore 5 cm, tirato a frattazzo","m²",21.30],
+    ["PROVA.02.002","Massetto autolivellante a base cementizia spessore medio 3 cm","m²",19.60],
+    ["PROVA.02.003","Impermeabilizzazione di superfici con guaina cementizia bicomponente, due mani","m²",24.10],
+    ["PROVA.03.001","Fornitura e posa di pavimento in gres porcellanato formato 60x60 posato a colla","m²",48.90],
+    ["PROVA.03.002","Fornitura e posa di rivestimento in piastrelle di ceramica per pareti bagno e cucina, posato a colla","m²",52.40],
+    ["PROVA.03.003","Fornitura e posa di battiscopa in gres porcellanato altezza 8 cm","m",11.30],
+    ["PROVA.03.004","Fornitura e posa di pavimento in legno prefinito a incastro, posa flottante","m²",64.70],
+    ["PROVA.04.001","Intonaco civile per interni a base di calce e cemento, spessore 1,5 cm","m²",26.40],
+    ["PROVA.04.002","Rasatura di pareti e soffitti con stucco in pasta, due mani","m²",12.90],
+    ["PROVA.04.003","Tinteggiatura di pareti e soffitti interni con idropittura traspirante, due mani","m²",7.80],
+    ["PROVA.04.004","Parete in lastre di cartongesso su orditura metallica spessore 10 cm, con isolante","m²",58.30],
+    ["PROVA.05.001","Punto acqua calda e fredda con tubazione in multistrato, dal collettore all'utenza","cad",118.00],
+    ["PROVA.05.002","Punto scarico in polipropilene per apparecchio sanitario","cad",86.50],
+    ["PROVA.05.003","Fornitura e posa di vaso sanitario sospeso in ceramica con cassetta da incasso","cad",420.00],
+    ["PROVA.05.004","Fornitura e posa di piatto doccia in ceramica 80x120","cad",395.00],
+    ["PROVA.06.001","Punto luce interrotto con conduttori in rame e tubo corrugato sottotraccia","cad",64.00],
+    ["PROVA.06.002","Punto presa 2P+T 16A con conduttori in rame e tubo corrugato sottotraccia","cad",58.50],
+    ["PROVA.06.003","Quadro elettrico di appartamento con interruttore differenziale e magnetotermici","cad",480.00],
+    ["PROVA.07.001","Fornitura e posa di serramento in PVC con vetrocamera basso emissivo","m²",420.00],
+    ["PROVA.07.002","Fornitura e posa di porta interna in legno tamburato con telaio e coprifili","cad",385.00]
+  ]
+};
+
+/* ================= STATO ================= */
+let regioneScelta = null;
+let prezzario = null;      // {voci, perCodice, indice, idf}
+const cachePrezzari = {};
+let workbook = null;
+let righeComputo = [];     // {codice, desc, um, q, candidati:[{i,score,tipo}], scelto, prezzoFinale}
+
+const $ = id => document.getElementById(id);
+const eur = n => (isFinite(n)?n:0).toLocaleString("it-IT",{style:"currency",currency:"EUR"});
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ================= TESTO E RICERCA ================= */
+const STOP = new Set("del della delle dei degli dello di da in con per su tra fra che come il lo la le gli una uno un ed e o a al alla alle ai agli allo nel nella nelle nei negli sul sulla sui sono compreso compresa compresi comprese incluso inclusa escluso esclusa ogni tipo fino oltre mediante altro onere oneri lavoro lavori opera opere dato data finito finita fornitura fornito fornita posa posato posata posti posto esecuzione eseguito eseguita realizzazione realizzato f.p.o fpo".split(" "));
+const SINONIMI = {rimozio:"demoliz",smontag:"demoliz",smantel:"demoliz",asporta:"demoliz",mattone:"lateriz",forati:"lateriz",tavolat:"tramezz",zoccoli:"battisc",tinteg:"tinteggi",idropit:"idropit",partizi:"pareti",parete:"pareti"};
+function norm(s){return String(s??"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
+function tokens(s){
+  return norm(s)
+    .replace(/\binterrott\w*/g,"interruttore")           // "punto luce interrotto" = con interruttore
+    .replace(/\bgesso rivestit\w*/g,"cartongesso")        // nomi diversi per lo stesso materiale
+    .replace(/\bporcellana vitrea|vitreous.china/g,"vetrochina")
+    .replace(/[^a-z0-9]+/g," ").split(" ")
+    .filter(t=>t.length>=3 && !STOP.has(t)).map(t=>/^\d+$/.test(t)?t:t.slice(0,7)).map(t=>SINONIMI[t]||t);
+}
+const RX_DEMO = /demoli|rimoz|smantel|smont|asport|sgombr/;
+const RX_SOVR = /sovrap|maggiorazion|per ogni .* in piu|in piu oltre/;
+const RX_SPEC = /amianto|disabil|accessibil|ospedal|restaur|archeolog|subacque|ferrovi/;   // voci speciali: solo se richieste
+function normUM(s){
+  let u = norm(s).replace(/\s|\./g,"").replace("²","2").replace("³","3");
+  if(/^(m2|mq|metriquadri)$/.test(u)) return "m2";
+  if(/^(m3|mc|metricubi)$/.test(u)) return "m3";
+  if(/^(m|ml|metri|metrilineari)$/.test(u)) return "m";
+  if(/^(cad|n|nr|num|cadauno|pz)$/.test(u)) return "cad";
+  if(/^(kg)$/.test(u)) return "kg";
+  if(/^(t|ton|tonn)$/.test(u)) return "t";
+  if(/^(h|ora|ore)$/.test(u)) return "h";
+  return u;
+}
+function normCod(s){return String(s??"").toUpperCase().replace(/\s+/g,"");}
+
+/* Il prezzario può arrivare in due formati:
+   formato 1: voci = [[codice, descrizione, um, prezzo], ...]
+   formato 2: paragrafi = [[titolo, testo esteso], ...], voci = [[codice, indiceParagrafo, variante, um, prezzo], ...]
+   Internamente ogni voce diventa [codice, descrizione, um, prezzo] con la descrizione costruita quando serve. */
+function preparaPrezzario(dati){
+  const f2 = dati.formato===2;
+  const N = dati.voci.length;
+  const cod = new Array(N), um = new Array(N), val = new Array(N), breve = new Array(N), lungo = new Array(N);
+  dati.voci.forEach((v,i)=>{
+    if(f2){
+      const p = dati.paragrafi[v[1]];
+      cod[i]=v[0]; um[i]=v[3]; val[i]=v[4];
+      breve[i] = p[0] + (v[2] ? " "+v[2] : "");
+      lungo[i] = p[1];
+    }else{
+      cod[i]=v[0]; um[i]=v[2]; val[i]=v[3]; breve[i]=v[1]; lungo[i]="";
+    }
+  });
+  const escludi = (dati.escludiRicerca||[]).map(normCod);
+  const priorita = (dati.priorita||[]).map(normCod);
+  const boost = new Float32Array(N).fill(1);
+  const perCodice = new Map(), indice = new Map(), lunghezze = new Array(N);
+  for(let i=0;i<N;i++){
+    perCodice.set(normCod(cod[i]), i);
+    const ci = normCod(cod[i]);
+    if(um[i]==="%" || escludi.some(e=>ci.startsWith(e))){ lunghezze[i]=0; continue; }   // voci in % e materiali: solo per codice
+    if(priorita.some(e=>ci.startsWith(e))) boost[i]=1.15;
+    const tb = new Set(tokens(breve[i]));
+    const tl = new Set(tokens(lungo[i]));
+    lunghezze[i] = Math.max(tb.size,1);
+    tb.forEach(t=>{ if(!indice.has(t)) indice.set(t,[]); indice.get(t).push(i*2); });     // parola nel titolo
+    tl.forEach(t=>{ if(tb.has(t)) return; if(!indice.has(t)) indice.set(t,[]); indice.get(t).push(i*2+1); }); // solo nel testo esteso
+  }
+  const idf = new Map();
+  indice.forEach((lista,t)=> idf.set(t, Math.log(1 + N/lista.length)));
+  const descr = i => lungo[i] ? (lungo[i] + (breve[i]!==lungo[i] && !lungo[i].toUpperCase().includes(breve[i].toUpperCase()) ? " – " + breve[i] : "")) : breve[i];
+  const voci = {length:N};
+  const titolo = new Array(N), variante = new Array(N);
+  dati.voci.forEach((v,i)=>{ if(f2){ titolo[i]=dati.paragrafi[v[1]][0]; variante[i]=v[2]; } else { titolo[i]=v[1]; variante[i]=""; } });
+  const voce = i => [cod[i], descr(i), um[i], val[i], breve[i], titolo[i], variante[i]];
+  // ricerca per codice: codice esatto, codice senza prefisso regionale (es. LOM261.), oppure codice della vecchia edizione (alias)
+  const alias = new Map(Object.entries(dati.alias||{}).map(([k,v])=>[normCod(k),normCod(v)]));
+  const prefissi = [...new Set(cod.slice(0,2000).map(c=>{ const m = normCod(c).match(/^([A-Z]+\d{2,3}[.\-_])/); return m?m[1]:null; }).filter(Boolean))];
+  const trovaCodice = c => {
+    const k = normCod(c); if(!k) return undefined;
+    if(perCodice.has(k)) return perCodice.get(k);
+    for(const p of prefissi){ if(perCodice.has(p+k)) return perCodice.get(p+k); }
+    if(alias.has(k)) return perCodice.get(alias.get(k));
+    return undefined;
+  };
+  const famiglia = c => {
+    const k = normCod(c), base = k.replace(/[.\-_][^.\-_]*$/,"");
+    if(!base || base===k || base.length<4) return [];
+    const ris = [];
+    for(const p of ["", ...prefissi]){
+      const pref = p+base;
+      perCodice.forEach((i,kk)=>{ if(ris.length<6 && kk.startsWith(pref) && kk!==p+k && /^[.\-_]/.test(kk.slice(pref.length))) ris.push(i); });
+      if(ris.length) break;
+    }
+    return ris;
+  };
+  return {...dati, N, perCodice, trovaCodice, famiglia, indice, idf, lunghezze, boost, voce, umDi:i=>um[i]};
+}
+
+function cerca(desc, um){
+  const P = prezzario, punteggi = new Map();
+  const tk = [...new Set(tokens(desc))];
+  const umN = normUM(um);
+  const qn = norm(desc);
+  const qDemo = RX_DEMO.test(qn), qSovr = RX_SOVR.test(qn);
+  const qInt = /\bintern/.test(qn), qEst = /\bestern/.test(qn);
+  const testa = tk.find(t=>!/^\d+$/.test(t) && P.indice.has(t) && t!=="demoliz");  // la parola che dice il tipo di lavoro
+  let pesoQuery = 0;
+  tk.forEach(t=>{
+    const lista = P.indice.get(t); if(!lista) return;
+    const w = P.idf.get(t); pesoQuery += w;
+    if(lista.length > P.N*0.15 && P.N > 200) return;
+    lista.forEach(x=>{ const i = x>>1, peso = (x&1) ? 0.45 : 1; punteggi.set(i,(punteggi.get(i)||0)+w*peso); });
+  });
+  if(!pesoQuery) return [];
+  let ris = [];
+  punteggi.forEach((s,i)=>{
+    const L = P.lunghezze[i];
+    let sc = (s / pesoQuery) * 2.2 / (1 + 0.025*Math.max(L-6,0));   // quanto della richiesta è coperto, con lieve penalità per titoli lunghi
+    ris.push({i, score:sc, tipo:"simile"});
+  });
+  ris.sort((a,b)=>b.score-a.score);
+  ris = ris.slice(0,80).map(r=>{
+    const v = P.voce(r.i), bn = norm(v[4]), bt = new Set(tokens(v[4]));
+    let sc = r.score;
+    if(umN){ if(normUM(v[2])===umN) sc *= 1.25; else sc *= 0.75; }
+    const cDemo = RX_DEMO.test(bn);
+    if(qDemo && !cDemo) sc *= 0.45;            // chiedo una demolizione, la voce no
+    if(!qDemo && cDemo) sc *= 0.35;            // chiedo una fornitura, la voce è una demolizione
+    if(!qSovr && RX_SOVR.test(bn)) sc *= 0.55; // i sovrapprezzi solo se richiesti
+    const sp = bn.match(RX_SPEC); if(sp && !qn.includes(sp[0])) sc *= 0.55;
+    if(qInt && /\bestern/.test(bn) && !/\bintern/.test(bn)) sc *= 0.6;
+    if(qEst && /\bintern/.test(bn) && !/\bestern/.test(bn)) sc *= 0.6;
+    if(testa){
+      // la parola principale è all'inizio del titolo o della variante? allora è proprio quel lavoro
+      const inizio = [...String(v[5]).split(" – "), String(v[6])].some(parte=>tokens(parte).slice(0,3).includes(testa));
+      sc *= inizio ? 1.4 : (bt.has(testa) ? 0.95 : 0.65);
+    }
+    sc *= P.boost[r.i];
+    return {i:r.i, score:sc, tipo:"simile"};
+  });
+  ris.sort((a,b)=>b.score-a.score);
+  return ris.slice(0,3).filter(r=>r.score>0.12);
+}
+
+/* ================= PASSO 1: REGIONE ================= */
+function disegnaRegioni(){
+  $("regioni").innerHTML = Object.entries(PREZZARI).map(([k,r])=>
+    `<button class="regione" data-r="${k}">${esc(r.nome)}</button>`).join("");
+}
+$("regioni").addEventListener("click", async e=>{
+  const b = e.target.closest("[data-r]"); if(!b) return;
+  document.querySelectorAll(".regione").forEach(x=>x.classList.toggle("attiva", x===b));
+  regioneScelta = b.dataset.r;
+  const conf = PREZZARI[regioneScelta], st = $("stato-prezzario");
+  st.className = "stato"; st.textContent = "Carico il prezzario...";
+  try{
+    if(!cachePrezzari[regioneScelta]){
+      let dati;
+      if(conf.url){
+        const r = await fetch(conf.url); if(!r.ok) throw new Error("http "+r.status);
+        dati = await r.json();
+      }else{
+        dati = {...PREZZARIO_PROVA, regione: conf.nome+" (prova)"};
+      }
+      cachePrezzari[regioneScelta] = preparaPrezzario(dati);
+    }
+    prezzario = cachePrezzari[regioneScelta];
+    const prova = !conf.url;
+    st.className = prova ? "stato err" : "stato ok";
+    st.textContent = prova
+      ? `Prezzario ${conf.nome} non ancora caricato: uso un prezzario di prova con ${prezzario.N} voci inventate.`
+      : `Prezzario ${prezzario.regione} ${prezzario.edizione} pronto: ${prezzario.N.toLocaleString("it-IT")} voci. Fonte: ${prezzario.fonte||""}`;
+    $("p2").classList.remove("spento");
+    if(righeComputo.length) abbina();
+  }catch(err){
+    st.className = "stato err";
+    st.textContent = "Non riesco a caricare il prezzario di questa Regione. Riprova tra poco.";
+  }
+});
+
+/* ================= PASSO 2: FILE ================= */
+const drop = $("drop");
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("sopra");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("sopra");}));
+drop.addEventListener("drop",e=>{ if(e.dataTransfer.files[0]) leggiFile(e.dataTransfer.files[0]); });
+$("file").addEventListener("change",e=>{ if(e.target.files[0]) leggiFile(e.target.files[0]); });
+
+function leggiFile(f){
+  const st = $("stato-file");
+  if(/\.pdf$/i.test(f.name)){
+    st.className="stato err";
+    st.textContent="Nella demo si caricano solo file Excel. I computi in PDF li legge la versione completa di ReporTech.";
+    return;
+  }
+  const rd = new FileReader();
+  rd.onload = ev=>{
+    try{
+      workbook = XLSX.read(new Uint8Array(ev.target.result),{type:"array"});
+      st.className="stato ok"; st.textContent = `Letto: ${f.name}`;
+      $("sel-foglio").innerHTML = workbook.SheetNames.map((n,i)=>`<option value="${i}">${esc(n)}</option>`).join("");
+      // scegli il foglio con l'intestazione migliore
+      let migliore = 0, best = -1;
+      workbook.SheetNames.forEach((n,i)=>{ const r = trovaIntestazione(righeFoglio(i)); if(r.punti>best){best=r.punti;migliore=i;} });
+      $("sel-foglio").value = migliore;
+      preparaColonne();
+      $("p3").classList.remove("spento");
+    }catch(err){
+      st.className="stato err"; st.textContent="Non riesco a leggere questo file. Prova a salvarlo come .xlsx.";
+    }
+  };
+  rd.readAsArrayBuffer(f);
+}
+
+function righeFoglio(i){
+  const ws = workbook.Sheets[workbook.SheetNames[i]];
+  return XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:true});
+}
+
+const RICONOSCI = {
+  codice:/^(cod|codice|tariffa|art\b|art\.|articolo|n\.?\s*e\.?\s*p|voce\s*elenco|rif)/i,
+  desc:/(descrizion|designazion|lavorazion|denominazion|indicazione)/i,
+  um:/^(u\.?\s*m|unit|unità|misura)/i,
+  qta:/(quantit|q\.?\s*t[aà]|qta|^q\.?$|totale\s*q)/i
+};
+function trovaIntestazione(righe){
+  let best = {riga:-1,punti:0,col:{}};
+  righe.slice(0,40).forEach((r,ri)=>{
+    const col = {}; let punti = 0;
+    r.forEach((c,ci)=>{
+      const t = String(c).trim(); if(!t || t.length>60) return;
+      for(const k in RICONOSCI){ if(col[k]===undefined && RICONOSCI[k].test(t)){ col[k]=ci; punti++; break; } }
+    });
+    if(punti>best.punti) best = {riga:ri,punti,col};
+  });
+  return best;
+}
+
+let intestazione = null;
+function preparaColonne(){
+  const righe = righeFoglio(+$("sel-foglio").value);
+  intestazione = trovaIntestazione(righe);
+  const hdr = intestazione.riga>=0 ? righe[intestazione.riga] : [];
+  const nCol = Math.max(0,...righe.slice(0,60).map(r=>r.length));
+  const lettera = i => XLSX.utils.encode_col(i);
+  const opzioni = `<option value="">(nessuna)</option>` + Array.from({length:nCol},(_,i)=>{
+    const nome = String(hdr[i]??"").trim();
+    return `<option value="${i}">${lettera(i)}${nome?" · "+esc(nome.slice(0,30)):""}</option>`;
+  }).join("");
+  ["codice","desc","um","qta"].forEach(k=>{
+    const sel = $("col-"+k); sel.innerHTML = opzioni;
+    sel.value = intestazione.col[k]!==undefined ? intestazione.col[k] : "";
+  });
+  const mancano = ["desc","qta"].filter(k=>intestazione.col[k]===undefined);
+  $("stato-col").className = mancano.length ? "stato err" : "stato ok";
+  $("stato-col").textContent = mancano.length
+    ? "Non ho trovato tutte le colonne: indica almeno Descrizione e Quantità."
+    : "Colonne trovate. Se sono giuste, vai avanti.";
+}
+$("sel-foglio").addEventListener("change", preparaColonne);
+
+function numero(v){
+  if(typeof v==="number") return v;
+  let s = String(v).trim().replace(/\s|€/g,"");
+  if(!s) return NaN;
+  if(s.includes(",")) s = s.replace(/\./g,"").replace(",",".");
+  return parseFloat(s);
+}
+
+/* ================= PASSO 3: ABBINAMENTO ================= */
+/* Computo con libretto delle misure (formato tipo PriMus):
+   riga titolo   -> codice padre + descrizione lunga
+   riga voce     -> N.R + codice articolo + variante "A) ..."
+   righe misura  -> dettagli di calcolo (si saltano)
+   riga totale   -> "Totale CODICE" + U.M. + quantità finale
+   righe capitolo-> "1 - opere di cantiere"                                   */
+function separaTitolo(t){
+  // "RIPORTI IN MATERIALE MISTO DI CAVAEsecuzione di riporti..." -> titolo + testo
+  const m = String(t).match(/^([^a-zà-ú]{6,}?[A-ZÀ-Ú0-9.)'’\]])\s*([A-ZÀ-Ú][a-zà-ú][\s\S]*)$/);
+  return m ? {titolo:m[1].trim(), testo:m[2].trim()} : {titolo:String(t).trim(), testo:""};
+}
+function leggiLibretto(righe, inizio, col){
+  const testo = r => String(r[col.desc]??"").replace(/\s+/g," ").trim();
+  const codDi = r => String(r[col.codice]??"").trim();
+  const reTot = /^totale\s+(.+)$/i;
+  // codici che hanno una riga "Totale CODICE"
+  const conTotale = new Set();
+  for(let i=inizio;i<righe.length;i++){ const m = testo(righe[i]).match(reTot); if(m) conTotale.add(normCod(m[1])); }
+  const codiciColonna = new Set(righe.slice(inizio).map(r=>normCod(codDi(r))).filter(Boolean));
+  let incroci = 0; conTotale.forEach(c=>{ if(codiciColonna.has(c)) incroci++; });
+  if(incroci < 3) return null;      // non è un libretto delle misure
+
+  const out = []; let titolo = null, capitolo = "", aperta = null;
+  for(let i=inizio;i<righe.length;i++){
+    const r = righe[i], t = testo(r), c = codDi(r), nc = normCod(c);
+    const mt = t.match(reTot);
+    if(mt){
+      const k = normCod(mt[1]);
+      const v = (aperta && normCod(aperta.codice)===k) ? aperta : [...out].reverse().find(x=>normCod(x.codice)===k && x.q==null);
+      if(v){ v.q = numero(r[col.qta]); v.um = col.um>=0 ? String(r[col.um]??"").trim() : ""; }
+      aperta = null; continue;
+    }
+    if(/^\d+\s*[-–]\s*[a-zà-ú]/i.test(t) && (!c || /^\d+$/.test(c))){ capitolo = t; titolo = null; continue; }   // capitolo
+    if(!c) continue;                                   // riga di misura o nota
+    if(conTotale.has(nc)){                             // inizio voce
+      const st = separaTitolo(t);
+      const padre = (titolo && nc.startsWith(normCod(titolo.codice))) ? titolo : null;
+      let desc, query;
+      if(padre && padre.codice!==c){
+        desc = padre.titolo + (st.titolo ? " – " + t : "");
+        query = padre.titolo + " " + t;
+      }else{
+        desc = st.titolo + (st.testo ? " – " + st.testo : "");
+        query = st.titolo + " " + st.testo.slice(0,160);
+      }
+      aperta = {codice:c, desc, query, um:"", q:null, capitolo, candidati:[], scelto:-1, prezzoFinale:null};
+      out.push(aperta);
+    }else{                                             // titolo / codice padre
+      const st = separaTitolo(t);
+      titolo = {codice:c, titolo:st.titolo, testo:st.testo};
+    }
+  }
+  return out.filter(v=>isFinite(v.q) && v.q>0);
+}
+
+$("btn-abbina").addEventListener("click", ()=>{
+  const c = k => $("col-"+k).value===""? -1 : +$("col-"+k).value;
+  const col = {codice:c("codice"), desc:c("desc"), um:c("um"), qta:c("qta")};
+  if(col.desc<0 || col.qta<0){
+    $("stato-col").className="stato err"; $("stato-col").textContent="Indica almeno le colonne Descrizione e Quantità."; return;
+  }
+  const righe = righeFoglio(+$("sel-foglio").value);
+  const inizio = intestazione && intestazione.riga>=0 ? intestazione.riga+1 : 0;
+  const lib = col.codice>=0 ? leggiLibretto(righe, inizio, col) : null;
+  if(lib && lib.length){
+    righeComputo = lib;
+    const nCap = new Set(lib.map(r=>r.capitolo).filter(Boolean)).size;
+    $("stato-col").className="stato ok";
+    $("stato-col").textContent = `Computo con libretto delle misure: ${lib.length} voci${nCap?` in ${nCap} capitoli`:""}. Le righe di misura sono state saltate, uso i totali.`;
+  }else{
+    righeComputo = [];
+    for(let i=inizio;i<righe.length;i++){
+      const r = righe[i];
+      const desc = String(r[col.desc]??"").trim();
+      const q = numero(r[col.qta]);
+      if(!desc || !isFinite(q) || q<=0) continue;   // salta titoli e capitoli
+      righeComputo.push({
+        codice: col.codice>=0 ? String(r[col.codice]??"").trim() : "",
+        desc, query:desc, um: col.um>=0 ? String(r[col.um]??"").trim() : "", q, capitolo:"",
+        candidati:[], scelto:-1, prezzoFinale:null
+      });
+    }
+  }
+  if(!righeComputo.length){
+    $("stato-col").className="stato err"; $("stato-col").textContent="Non ho trovato righe con descrizione e quantità. Controlla le colonne o guarda «Come deve essere il file Excel?» al passo 2."; $("guida").open = true; return;
+  }
+  abbina();
+});
+
+function abbina(){
+  if(!prezzario) return;
+  righeComputo.forEach(r=>{
+    r.candidati = [];
+    r.codiceMancante = false;
+    let iCod = r.codice ? prezzario.trovaCodice(r.codice) : undefined;
+    let tipo = "codice";
+    if(iCod===undefined && r.codice){
+      // il computo scrive il codice senza la lettera finale (es. 11.8.CP1.11 -> 11.8.CP1.11.A)
+      const sep = /[.\-_]$/.test(r.codice) ? "" : ".";
+      iCod = prezzario.trovaCodice(r.codice+sep+"A");
+      if(iCod!==undefined && prezzario.trovaCodice(r.codice+sep+"B")!==undefined) iCod = undefined; // ci sono più varianti: non indovino
+    }
+    if(iCod!==undefined){
+      const trovato = normCod(prezzario.voce(iCod)[0]), cercato = normCod(r.codice);
+      if(!trovato.endsWith(cercato) && !trovato.startsWith(cercato) && !trovato.includes(cercato)) tipo = "alias";
+      r.candidati.push({i:iCod,score:1,tipo});
+    }else if(r.codice){
+      r.codiceMancante = true;
+      // stessa famiglia di codici (es. 46.2.KM1.04.E non c'è più: propongo 46.2.KM1.04.A, .B ...)
+      prezzario.famiglia(r.codice).slice(0,3).forEach(i=>r.candidati.push({i,score:0.9,tipo:"famiglia"}));
+    }
+    cerca(r.query||r.desc, r.um).forEach(c=>{ if(c.i!==iCod && !r.candidati.some(x=>x.i===c.i)) r.candidati.push(c); });
+    r.candidati = r.candidati.slice(0,5);
+    r.scelto = r.candidati.length ? 0 : -1;
+  });
+  disegnaRighe();
+  $("p4").classList.remove("spento");
+  $("p4").scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+/* ================= PASSO 4: TABELLA ================= */
+function prezzoPrezzario(r){
+  if(r.scelto<0) return NaN;
+  const v = prezzario.voce(r.candidati[r.scelto].i);
+  return v[2]==="%" ? NaN : v[3];   // le voci in percentuale non sono un prezzo unitario
+}
+
+function disegnaRighe(){
+  const V = {}; const vv = i => V[i] || (V[i] = prezzario.voce(i));
+  let capPrec = null, nCap = -1;
+  $("righe").innerHTML = righeComputo.map((r,k)=>{
+    let testata = "";
+    if(r.capitolo && r.capitolo!==capPrec){
+      nCap++; capPrec = r.capitolo; r._cap = nCap;
+      testata = `<tr class="riga-cap"><td colspan="7">${esc(r.capitolo)}</td><td class="n" id="sub-${nCap}"></td></tr>`;
+    }else{ r._cap = r.capitolo ? nCap : -1; }
+    let match;
+    if(!r.candidati.length){
+      match = `<span class="badge nessuna">${r.codiceMancante?"Codice non presente in questa edizione":"Nessuna voce trovata"}</span><div class="testo-voce">Scrivi tu il prezzo.</div>`;
+    }else{
+      const c = r.candidati[r.scelto];
+      const badge = c.tipo==="codice" ? `<span class="badge codice">Stesso codice</span>`
+                  : c.tipo==="alias" ? `<span class="badge codice">Codice dell'edizione precedente</span>`
+                  : c.tipo==="famiglia" ? `<span class="badge simile">Codice non presente in questa edizione: voce della stessa famiglia</span>`
+                  : (r.codiceMancante ? `<span class="badge simile">Codice non presente in questa edizione: voce simile</span>` : `<span class="badge simile">Voce simile, controlla</span>`);
+      const opts = r.candidati.map((c,j)=>{
+        const v = vv(c.i);
+        return `<option value="${j}" ${j===r.scelto?"selected":""}>${esc(v[0])} · ${esc(v[4].slice(0,60))} · ${esc(v[2])} · ${eur(v[3])}</option>`;
+      }).join("") + `<option value="-1" ${r.scelto===-1?"selected":""}>Nessuna di queste</option>`;
+      match = `${badge}<select data-k="${k}" class="sel-cand">${opts}</select>`
+            + (r.scelto>=0 ? `<div class="testo-voce clamp">${esc(vv(r.candidati[r.scelto].i)[1])}</div>` : "")
+            + (r.scelto>=0 && vv(r.candidati[r.scelto].i)[2]==="%" ? `<div class="testo-voce" style="color:var(--giallo)">Voce in percentuale: calcola tu l'importo.</div>` : "");
+    }
+    const pp = prezzoPrezzario(r);
+    const imp = (r.prezzoFinale??0)*r.q;
+    return testata + `<tr>
+      <td>${k+1}</td>
+      <td class="desc">${r.codice?`<span class="cod">${esc(r.codice)}</span>`:""}<span class="clamp">${esc(r.desc)}</span></td>
+      <td>${esc(r.um)}</td>
+      <td class="n">${r.q.toLocaleString("it-IT",{maximumFractionDigits:3})}</td>
+      <td class="match">${match}</td>
+      <td class="n">${isFinite(pp)?eur(pp)+`<br><button class="btn btn-contorno btn-mini usa" data-k="${k}" style="margin-top:6px">Usa questo</button>`:"–"}</td>
+      <td class="n"><input type="number" step="0.01" min="0" data-k="${k}" class="inp-prezzo" value="${r.prezzoFinale??""}" placeholder="0,00"></td>
+      <td class="n" id="imp-${k}">${eur(imp)}</td>
+    </tr>`;
+  }).join("");
+  aggiornaTotali();
+}
+
+$("righe").addEventListener("change", e=>{
+  if(e.target.classList.contains("sel-cand")){
+    righeComputo[+e.target.dataset.k].scelto = +e.target.value; disegnaRighe();
+  }
+});
+$("righe").addEventListener("input", e=>{
+  if(e.target.classList.contains("inp-prezzo")){
+    const k = +e.target.dataset.k, v = parseFloat(e.target.value);
+    righeComputo[k].prezzoFinale = isFinite(v) ? v : null;
+    $("imp-"+k).textContent = eur((righeComputo[k].prezzoFinale??0)*righeComputo[k].q);
+    aggiornaTotali();
+  }
+});
+$("righe").addEventListener("click", e=>{
+  const b = e.target.closest(".usa"); if(!b) return;
+  const r = righeComputo[+b.dataset.k]; r.prezzoFinale = prezzoPrezzario(r); disegnaRighe();
+});
+$("righe").addEventListener("click", e=>{
+  const c = e.target.closest(".clamp"); if(c) c.classList.toggle("aperto");
+});
+
+$("btn-copia-tutti").addEventListener("click", ()=>{
+  righeComputo.forEach(r=>{ const p = prezzoPrezzario(r); if(r.prezzoFinale==null && isFinite(p)) r.prezzoFinale = p; });
+  disegnaRighe();
+});
+$("btn-applica-perc").addEventListener("click", ()=>{
+  const p = parseFloat($("perc").value)||0;
+  righeComputo.forEach(r=>{ const b = prezzoPrezzario(r); if(isFinite(b)) r.prezzoFinale = Math.round(b*(1+p/100)*100)/100; });
+  disegnaRighe();
+});
+
+function aggiornaTotali(){
+  let totP = 0, totF = 0, cod = 0, sim = 0, nes = 0, conPrezzo = 0;
+  righeComputo.forEach(r=>{
+    const p = prezzoPrezzario(r); if(isFinite(p)) totP += p*r.q;
+    if(r.prezzoFinale!=null){ totF += r.prezzoFinale*r.q; conPrezzo++; }
+    if(r.scelto<0) nes++; else if(r.candidati[r.scelto].tipo!=="simile") cod++; else sim++;
+  });
+  const sub = {};
+  righeComputo.forEach(r=>{ if(r._cap>=0) sub[r._cap] = (sub[r._cap]||0) + (r.prezzoFinale??0)*r.q; });
+  Object.entries(sub).forEach(([k,v])=>{ const el = $("sub-"+k); if(el) el.textContent = eur(v); });
+  $("tot-prezzario").textContent = eur(totP);
+  $("tot-prev").textContent = eur(totF);
+  const d = totF-totP;
+  $("tot-diff").textContent = (d>0?"+":"")+eur(d);
+  $("riassunto").innerHTML =
+    `<span class="chip">${righeComputo.length} voci nel computo</span>`+
+    `<span class="chip verde">${cod} con lo stesso codice</span>`+
+    `<span class="chip giallo">${sim} simili da controllare</span>`+
+    (nes?`<span class="chip">${nes} senza voce</span>`:"")+
+    `<span class="chip">${conPrezzo} con il tuo prezzo</span>`;
+}
+
+/* ================= CONTATTI E DEMO ================= */
+const CONTATTI = {
+  sito:"www.reportech.app", email:"info@techsolutionsti.com",
+  telefoni:["+39 393 924 7176","+39 342 040 3923"],
+  azienda:"Tech Solutions · P.IVA 05492550263 · Conegliano (TV)"
+};
+const TYPEFORM_ID = "ltpsjxe6";
+// Il pulsante apre il modulo Typeform in una finestra sopra la pagina (iframe semplice, senza librerie esterne).
+const TYPEFORM_URL = "https://form.typeform.com/to/"+TYPEFORM_ID+"?typeform-medium=preventivatore-demo&typeform-embed=popup-blank";
+const DENTRO_IFRAME = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
+$("tf-nuova").href = TYPEFORM_URL.replace("popup-blank","new-tab");
+function apriDemo(ev){
+  // Dentro Wix la pagina è in un riquadro alto: una finestra "fissa" finirebbe fuori vista.
+  // Per questo, se siamo dentro un riquadro, apriamo il modulo in una nuova scheda.
+  if(DENTRO_IFRAME){
+    window.open(TYPEFORM_URL.replace("popup-blank","new-tab"), "_blank", "noopener");
+    return;
+  }
+  const f = $("tf-frame");
+  if(!f.src) f.src = TYPEFORM_URL;
+  $("tf-overlay").classList.add("aperto");
+}
+function chiudiDemo(){ $("tf-overlay").classList.remove("aperto"); }
+document.querySelectorAll(".apri-demo").forEach(b=>b.addEventListener("click", apriDemo));
+$("tf-chiudi").addEventListener("click", chiudiDemo);
+$("tf-overlay").addEventListener("click", e=>{ if(e.target.id==="tf-overlay") chiudiDemo(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") chiudiDemo(); });
+
+$("btn-modello").addEventListener("click", ()=>{
+  const aoa = [
+    ["Codice","Descrizione","U.M.","Quantità"],
+    ["","DEMOLIZIONI","",""],
+    ["","Demolizione di tramezzi in laterizio","m²",18],
+    ["","Rimozione di rivestimento in piastrelle","m²",30],
+    ["","PAVIMENTI","",""],
+    ["","Massetto in sabbia e cemento","m²",65],
+    ["","Pavimento in gres porcellanato 60x60","m²",65],
+    ["","Battiscopa in gres porcellanato","m",48]
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = [{wch:22},{wch:60},{wch:8},{wch:10}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Computo");
+  try{ XLSX.writeFile(wb, "modello-computo-reportech.xlsx"); }catch(e){}
+});
+
+function datiIntestazione(){
+  return {impresa:$("int-impresa").value.trim(), cliente:$("int-cliente").value.trim(), oggetto:$("int-oggetto").value.trim()};
+}
+
+let logoDataUrl = null;
+fetch("logo-reportech.png").then(r=>r.ok?r.blob():null).then(b=>{
+  if(!b) return; const fr = new FileReader(); fr.onload = ()=>{ logoDataUrl = fr.result; }; fr.readAsDataURL(b);
+}).catch(()=>{});
+
+const pdfTxt = t => String(t??"").replace(/²/g,"2").replace(/³/g,"3").replace(/[’‘]/g,"'").replace(/[“”]/g,'"');   // i font base del PDF non hanno ² e ³
+const eurPdf = n => (isFinite(n)?n:0).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2}) + " €";
+
+$("btn-pdf").addEventListener("click", ()=>{
+  const st = $("stato-export");
+  if(!window.jspdf){ st.className="stato err"; st.textContent="Non riesco a creare il PDF. Ricarica la pagina e riprova."; return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:"mm", format:"a4"});
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 14;
+  const blu = [26,86,160], bluScuro = [13,45,94], grigio = [90,104,120];
+  const h = datiIntestazione();
+  const oggi = new Date().toLocaleDateString("it-IT");
+
+  // testata
+  if(logoDataUrl){ try{ doc.addImage(logoDataUrl,"PNG",M,12,46,10.5); }catch(e){} }
+  else { doc.setFont("helvetica","bold"); doc.setFontSize(18); doc.setTextColor(...blu); doc.text("ReporTech",M,20); }
+  doc.setFont("helvetica","bold"); doc.setFontSize(16); doc.setTextColor(...bluScuro);
+  doc.text("Preventivo", W-M, 17, {align:"right"});
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...grigio);
+  doc.text("Data: "+oggi, W-M, 22, {align:"right"});
+  doc.setDrawColor(...blu); doc.setLineWidth(0.6); doc.line(M,27,W-M,27);
+
+  let y = 34;
+  doc.setFontSize(10); doc.setTextColor(27,37,51);
+  const riga = (et, val)=>{ if(!val) return; doc.setFont("helvetica","bold"); doc.text(et, M, y); doc.setFont("helvetica","normal");
+    const t = doc.splitTextToSize(val, W-2*M-32); doc.text(t, M+32, y); y += 5*t.length; };
+  riga("Impresa:", h.impresa);
+  riga("Cliente:", h.cliente);
+  riga("Lavori:", h.oggetto);
+  riga("Prezzario:", pdfTxt(`${prezzario.regione} ${prezzario.edizione||""} – ${prezzario.fonte||""}`));
+  y += 2;
+
+  // tabella
+  let tot = 0, capCorr = null, subCorr = 0;
+  const body = [];
+  const chiudiCap = ()=>{ if(capCorr!==null) body.push([{content:"Totale "+capCorr, colSpan:6, styles:{halign:"right",fontStyle:"bold",textColor:bluScuro}}, {content:eurPdf(Math.round(subCorr*100)/100), styles:{halign:"right",fontStyle:"bold",textColor:bluScuro}}]); };
+  righeComputo.forEach((r,k)=>{
+    if(r.capitolo && r.capitolo!==capCorr){
+      chiudiCap(); capCorr = r.capitolo; subCorr = 0;
+      body.push([{content:r.capitolo.toUpperCase(), colSpan:7, styles:{fillColor:[230,238,248],textColor:bluScuro,fontStyle:"bold"}}]);
+    }
+    const c = r.scelto>=0 ? prezzario.voce(r.candidati[r.scelto].i) : null;
+    const imp = Math.round((r.prezzoFinale??0)*r.q*100)/100; tot += imp; subCorr += imp;
+    const descPdf = pdfTxt(r.desc.length>230 ? r.desc.slice(0,230).replace(/\s+\S*$/,"")+"…" : r.desc);
+    body.push([String(k+1), r.codice || (c?c[0]:""), descPdf, pdfTxt(r.um), r.q.toLocaleString("it-IT",{maximumFractionDigits:3}),
+            r.prezzoFinale!=null?eurPdf(r.prezzoFinale):"", eurPdf(imp)]);
+  });
+  chiudiCap();
+  doc.autoTable({
+    startY:y, margin:{left:M,right:M,bottom:22}, rowPageBreak:"avoid",
+    head:[["#","Codice","Descrizione","U.M.","Quantità","Prezzo unit.","Importo"]],
+    body,
+    styles:{font:"helvetica",fontSize:8.5,cellPadding:1.8,textColor:[27,37,51],lineColor:[220,228,239],lineWidth:0.2,valign:"top"},
+    headStyles:{fillColor:bluScuro,textColor:255,fontStyle:"bold"},
+    alternateRowStyles:{fillColor:[255,255,255]},
+    columnStyles:{0:{cellWidth:8},1:{cellWidth:32,fontSize:7},2:{cellWidth:"auto"},3:{cellWidth:12},4:{cellWidth:16,halign:"right"},5:{cellWidth:22,halign:"right"},6:{cellWidth:24,halign:"right"}}
+  });
+  y = doc.lastAutoTable.finalY + 6;
+  if(y > H-40){ doc.addPage(); y = 20; }
+  doc.setFillColor(...bluScuro); doc.rect(W-M-80, y-5, 80, 10, "F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(255,255,255);
+  doc.text("Totale lavori (IVA esclusa)", W-M-77, y+1.5);
+  doc.text(eurPdf(Math.round(tot*100)/100), W-M-3, y+1.5, {align:"right"});
+  y += 12;
+  doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...grigio);
+  const nota = doc.splitTextToSize("Documento preparato con la demo del preventivatore ReporTech. I prezzi di riferimento vengono dal prezzario regionale indicato; le voci abbinate automaticamente vanno controllate prima dell'invio al cliente.", W-2*M);
+  doc.text(nota, M, y);
+
+  // piè di pagina con contatti su ogni pagina
+  const n = doc.getNumberOfPages();
+  for(let i=1;i<=n;i++){
+    doc.setPage(i);
+    doc.setDrawColor(...blu); doc.setLineWidth(0.3); doc.line(M,H-16,W-M,H-16);
+    doc.setFontSize(8); doc.setTextColor(...bluScuro); doc.setFont("helvetica","bold");
+    doc.text("ReporTech – gestione cantieri, preventivi, rapportini e SAL", M, H-11.5);
+    doc.setFont("helvetica","normal"); doc.setTextColor(...grigio);
+    doc.text(`${CONTATTI.sito}  ·  ${CONTATTI.email}  ·  ${CONTATTI.telefoni.join("  ·  ")}`, M, H-7.5);
+    doc.text(`${CONTATTI.azienda}`, M, H-3.8);
+    doc.text(`Pagina ${i} di ${n}`, W-M, H-7.5, {align:"right"});
+  }
+  try{
+    doc.save("preventivo-reportech.pdf");
+    st.className="stato ok"; st.textContent="PDF scaricato.";
+  }catch(err){
+    st.className="stato err"; st.textContent="Il download è bloccato in questa pagina. Apri la demo in una nuova scheda.";
+  }
+});
+
+/* ================= EXPORT EXCEL ================= */
+$("btn-export").addEventListener("click", ()=>{
+  const reg = PREZZARI[regioneScelta]?.nome || "";
+  const h = datiIntestazione();
+  const aoa = [["PREVENTIVO", "", "", "", "", "", "Data", new Date().toLocaleDateString("it-IT")]];
+  if(h.impresa) aoa.push(["Impresa", h.impresa]);
+  if(h.cliente) aoa.push(["Cliente", h.cliente]);
+  if(h.oggetto) aoa.push(["Lavori", h.oggetto]);
+  aoa.push(["Prezzario", `${prezzario.regione} ${prezzario.edizione||""}`], []);
+  aoa.push(["Codice computo","Descrizione","U.M.","Quantità",`Codice prezzario ${reg}`,"Prezzo prezzario","Prezzo preventivo","Importo"]);
+  let tot = 0;
+  let capCorr = null, subCorr = 0;
+  const chiudi = ()=>{ if(capCorr!==null) aoa.push(["","Totale "+capCorr,"","","","","",Math.round(subCorr*100)/100]); };
+  righeComputo.forEach(r=>{
+    if(r.capitolo && r.capitolo!==capCorr){ chiudi(); capCorr = r.capitolo; subCorr = 0; aoa.push(["",r.capitolo.toUpperCase()]); }
+    const c = r.scelto>=0 ? prezzario.voce(r.candidati[r.scelto].i) : null;
+    const imp = Math.round((r.prezzoFinale??0)*r.q*100)/100; tot += imp; subCorr += imp;
+    aoa.push([r.codice, r.desc, r.um, r.q, c?c[0]:"", c?c[3]:"", r.prezzoFinale??"", imp]);
+  });
+  chiudi();
+  aoa.push([], ["","","","","","","Totale",Math.round(tot*100)/100]);
+  aoa.push([], ["Preparato con il preventivatore ReporTech"], [`${CONTATTI.sito} · ${CONTATTI.email} · ${CONTATTI.telefoni.join(" · ")}`], [CONTATTI.azienda]);
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = [{wch:16},{wch:60},{wch:7},{wch:10},{wch:20},{wch:14},{wch:16},{wch:14}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Preventivo");
+  try{
+    XLSX.writeFile(wb, "preventivo-reportech.xlsx");
+    $("stato-export").className="stato ok"; $("stato-export").textContent="File scaricato.";
+  }catch(err){
+    $("stato-export").className="stato err"; $("stato-export").textContent="Il download è bloccato in questa pagina. Apri la demo in una nuova scheda.";
+  }
+});
+
+disegnaRegioni();
+</script>
+</body>
+</html>
