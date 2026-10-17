@@ -121,6 +121,16 @@
   .intestazione input{width:100%}
   .bozza{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:#FFF4DB;border:1px solid #F0D590;border-radius:12px;padding:12px 16px;margin:12px 0;font-weight:600;color:var(--giallo)}
   .barra-azioni{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  .barra-fissa{position:sticky;top:0;z-index:30;background:#fff;margin:0 -20px;padding:10px 20px 4px;border-bottom:1px solid transparent;transition:box-shadow .2s}
+  .barra-fissa.attaccata{box-shadow:0 8px 18px rgba(13,45,94,.14);border-bottom-color:var(--bordo);border-radius:0 0 12px 12px}
+  .barra-fissa.attaccata .azione{padding:8px 12px;flex-direction:row;align-items:center;gap:8px;font-size:14px}
+  .barra-fissa.attaccata .azione span{font-size:17px}
+  .barra-fissa.attaccata .azione small{display:none}
+  .barra-fissa.attaccata .dest{margin:8px 0 4px}
+  .barra-fissa .pannello.aperto{max-height:62vh;overflow:auto;margin:10px 0}
+  @media (max-width:700px),(max-height:560px){.barra-fissa{position:static;box-shadow:none!important}.barra-fissa .pannello.aperto{max-height:none}}
+  .riga-aggiungi{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;padding:10px 14px;border:2px dashed var(--bordo);border-radius:12px;color:var(--blu-scuro)}
+  .riga-aggiungi b{margin-right:6px}
   .azione{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:2px solid var(--bordo);background:#fff;border-radius:12px;padding:12px 14px;cursor:pointer;font-family:inherit;font-weight:700;font-size:15px;color:var(--blu-scuro)}
   .azione span{font-size:20px}
   .azione small{font-weight:500;font-size:12.5px;color:var(--soft)}
@@ -168,6 +178,11 @@
   .riga-form input{flex:1;min-width:200px;font-size:14px;padding:8px 10px}
   .lista-chk{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0}
   .lista-chk.colonna{flex-direction:column}
+  .box-salva .lista-chk{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 8px}
+  .box-salva .chk{padding:7px 10px;border:1px solid var(--bordo);border-radius:8px;background:#fff;line-height:1.25}
+  .box-salva .chk:has(input:checked){border-color:var(--blu);background:#EEF4FB}
+  #prev-tabella input[type=checkbox]{width:16px;height:16px;flex:0 0 16px;padding:0;margin:0;accent-color:var(--blu)}
+  .box-salva .riga-form input{border:1px solid var(--bordo)!important;background:#fff!important}
   .chk{display:flex;gap:6px;align-items:center;font-weight:500;font-size:14px;margin:0;color:var(--testo);cursor:pointer}
   .chk.riga{padding:6px 10px;border:1px solid var(--bordo);border-radius:8px}
   .chk small{color:var(--soft)}
@@ -254,11 +269,12 @@
   <!-- PASSO 2: PREVENTIVO -->
   <section class="passo" id="p-prev">
     <div class="passo-titolo"><div class="num">2</div><h2>Componi il preventivo</h2></div>
+    <div class="barra-fissa" id="barra-fissa">
     <div class="barra-azioni">
       <button class="azione" id="btn-computo" data-pannello="pannello-computo"><span>📥</span>Importa computo<small>Excel ricevuto dal committente</small></button>
       <button class="azione" id="btn-prezzario" data-pannello="pannello-prezzario"><span>📚</span>Importa da prezzario<small>Sfoglia le categorie e scegli le voci</small></button>
       <button class="azione" id="btn-anagrafica" data-pannello="pannello-anagrafica"><span>🗂️</span>Importa da anagrafica<small>Modelli, fasi e lavorazioni salvate</small></button>
-      <button class="azione" id="btn-libera"><span>✏️</span>Lavorazione libera<small>Una voce scritta da te</small></button>
+      <button class="azione" id="btn-libera"><span>✏️</span>Inserimento manuale<small>Una voce scritta da te</small></button>
     </div>
     <div class="dest"><label for="dest-cap">Le nuove voci vanno nel capitolo</label>
       <select id="dest-cap"></select><input type="text" id="dest-cap-nuovo" class="nascosto" placeholder="Nome del nuovo capitolo"></div>
@@ -346,17 +362,17 @@
       <div id="ana-corpo"></div>
       <p class="nota-mem">Nella demo l'anagrafica resta salvata solo in questo browser.</p>
     </div>
+    </div><!-- /barra-fissa -->
 
     <div class="prev-vuoto" id="prev-vuoto">
       <b>Il preventivo è ancora vuoto.</b>
-      <p>Importa un computo, scegli le voci dal prezzario, carica una fase dalla tua anagrafica (prova il modello «Casa completa») oppure aggiungi una lavorazione libera.</p>
+      <p>Importa un computo, scegli le voci dal prezzario, carica una fase dalla tua anagrafica (prova il modello «Casa completa») oppure scrivi una voce con l'inserimento manuale.</p>
     </div>
 
     <div class="nascosto" id="prev-contenuto">
       <div class="riassunto" id="riassunto"></div>
       <div class="azioni" style="margin:0 0 12px">
         <button class="btn btn-contorno btn-mini" id="btn-copia-tutti">Usa il prezzo del prezzario dove il prezzo è vuoto</button>
-        <span class="aiuto-inline" id="stato-copia" style="color:#9a6700;font-weight:600"></span>
         <span class="aiuto-inline">Scrivi le misure: le colonne vuote non contano, i valori negativi tolgono (per esempio i vuoti di porte e finestre).</span>
       </div>
       <div class="tab-wrap">
@@ -367,6 +383,13 @@
             <th class="n" style="width:96px">Quantità</th><th class="n" style="width:110px">Prezzo unit.</th><th class="n" style="width:120px">Importo</th>
           </tr></thead>
         </table>
+      </div>
+      <div class="riga-aggiungi">
+        <b>+ Aggiungi voci</b>
+        <button class="btn btn-contorno btn-mini" data-clic="btn-computo">📥 Da computo</button>
+        <button class="btn btn-contorno btn-mini" data-clic="btn-prezzario">📚 Da prezzario</button>
+        <button class="btn btn-contorno btn-mini" data-clic="btn-anagrafica">🗂️ Da anagrafica</button>
+        <button class="btn btn-contorno btn-mini" data-clic="btn-libera">✏️ Inserimento manuale</button>
       </div>
       <div class="ricarico">
         <label for="perc">Ricarico o ribasso sul prezzario
@@ -898,7 +921,7 @@ const nf = n => (isFinite(n)?n:0).toLocaleString("it-IT",{minimumFractionDigits:
 
 function htmlMatch(v){
   if(v.origine!=="computo"){
-    const fonte = v.origine==="prezzario" ? `Dal prezzario ${esc(v.fonteRif)}` : v.origine==="anagrafica" ? "Dalla tua anagrafica" : "Lavorazione libera";
+    const fonte = v.origine==="prezzario" ? `Dal prezzario ${esc(v.fonteRif)}` : v.origine==="anagrafica" ? "Dalla tua anagrafica" : "Inserimento manuale";
     const cls = v.origine==="libera" ? "badge neutro" : "badge codice";
     const rif = v.prezzoRif!=null ? `<div class="rif">Prezzo di riferimento <b>${nf(v.prezzoRif)} €</b> <button class="btn-link" data-act="usa">Usa questo</button></div>` : "";
     return `<span class="${cls}">${fonte}</span>${rif}`;
@@ -1091,15 +1114,12 @@ corpo.addEventListener("click", e=>{
 });
 
 $("btn-copia-tutti").addEventListener("click", ()=>{
-  let saltate = 0;
-  prev.forEach(v=>{ const p = rifVoce(v); if(v.prezzoFinale==null && p!=null){ if(daConfermare(v)) saltate++; else v.prezzoFinale = p; } });
+  prev.forEach(v=>{ const p = rifVoce(v); if(v.prezzoFinale==null && p!=null) v.prezzoFinale = p; });
   disegnaPreventivo(); salvaBozza();
-  const st = $("stato-copia");
-  if(st){ st.textContent = saltate ? `${saltate} voci simili non sono state toccate: controllale e premi «Usa questo» su ognuna.` : ""; }
 });
 $("btn-applica-perc").addEventListener("click", ()=>{
   const p = numero($("perc").value)||0;
-  prev.forEach(v=>{ const b = rifVoce(v); if(b!=null && (!daConfermare(v) || v.prezzoFinale!=null)) v.prezzoFinale = Math.round(b*(1+p/100)*100)/100; });
+  prev.forEach(v=>{ const b = rifVoce(v); if(b!=null) v.prezzoFinale = Math.round(b*(1+p/100)*100)/100; });
   disegnaPreventivo(); salvaBozza();
 });
 $("btn-libera").addEventListener("click", ()=>{
@@ -1121,9 +1141,19 @@ function apriPannello(id){
   if(era) return false;
   p.classList.add("aperto");
   const b = document.querySelector(`.barra-azioni [data-pannello="${id}"]`); if(b) b.classList.add("attivo");
-  p.scrollIntoView({behavior:"smooth", block:"start"});
+  const bf = $("barra-fissa");
+  if(!bf.classList.contains("attaccata")) bf.scrollIntoView({behavior:"smooth", block:"start"});
+  p.scrollTop = 0;
   return true;
 }
+document.querySelectorAll("[data-clic]").forEach(b=>b.addEventListener("click", ()=>$(b.dataset.clic).click()));
+function controllaBarra(){
+  const bf = $("barra-fissa"); if(!bf) return;
+  const fissa = getComputedStyle(bf).position==="sticky";
+  bf.classList.toggle("attaccata", fissa && bf.getBoundingClientRect().top <= 1 && $("p-prev").getBoundingClientRect().top < -10);
+}
+window.addEventListener("scroll", controllaBarra, {passive:true});
+window.addEventListener("resize", controllaBarra);
 document.querySelectorAll(".pannello .chiudi").forEach(b=>b.addEventListener("click", chiudiPannelli));
 $("btn-computo").addEventListener("click", ()=>{ if(serveRegione()) return; apriPannello("pannello-computo"); });
 $("btn-prezzario").addEventListener("click", ()=>{ if(serveRegione()) return; if(apriPannello("pannello-prezzario")){ $("pz-cerca").value=""; apriNodo(-1); } });
