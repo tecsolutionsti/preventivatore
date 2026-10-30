@@ -294,6 +294,21 @@
   .gate{border-color:var(--verde)}
   /* finestra dopo l'import: lettura buona o scarsa, file lasciato per insegnare al preventivatore */
   .camp-velo{position:fixed;inset:0;z-index:1100;background:rgba(13,45,94,.55)}
+  /* schermata «IA al lavoro» durante l'import: riquadro in pagina (anche dentro l'iframe Wix), come la finestra a comparsa */
+  .ia-box{position:absolute;z-index:1050;left:50%;transform:translateX(-50%);width:min(520px,calc(100% - 32px));box-sizing:border-box;background:#fff;border:2px solid var(--blu);border-radius:16px;padding:26px 22px 20px;box-shadow:0 20px 60px rgba(13,45,94,.28);text-align:center;scroll-margin:24px}
+  .ia-icona{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;background:linear-gradient(135deg,var(--blu),var(--blu-scuro));display:flex;align-items:center;justify-content:center;animation:ia-pulsa 1.6s ease-in-out infinite}
+  .ia-icona svg{width:34px;height:34px;fill:#fff}
+  @keyframes ia-pulsa{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(26,86,160,.45)}50%{transform:scale(1.07);box-shadow:0 0 0 14px rgba(26,86,160,0)}}
+  .ia-box h3{font-size:19px;margin:0 0 8px}
+  .ia-frase{min-height:2.6em;color:var(--blu-scuro);font-size:15px;margin:0 0 6px}
+  .ia-punti{display:flex;justify-content:center;gap:6px;margin:0 0 14px}
+  .ia-punti span{width:8px;height:8px;border-radius:50%;background:var(--blu);opacity:.25;animation:ia-punto 1.2s ease-in-out infinite}
+  .ia-punti span:nth-child(2){animation-delay:.2s} .ia-punti span:nth-child(3){animation-delay:.4s}
+  @keyframes ia-punto{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-4px)}}
+  .ia-barra{height:10px;border-radius:6px;background:#E6EEF8;overflow:hidden}
+  .ia-barra div{height:100%;width:0;background:linear-gradient(90deg,var(--blu),var(--blu-scuro));border-radius:6px;transition:width .2s linear}
+  .ia-conta{font-size:13px;color:var(--soft);margin-top:8px;font-variant-numeric:tabular-nums}
+  @media (prefers-reduced-motion: reduce){ .ia-icona,.ia-punti span{animation:none} .ia-punti span{opacity:.6} .ia-barra div{transition:none} }
   .camp-dialog{position:absolute;z-index:1101;left:50%;transform:translateX(-50%);width:min(560px,calc(100% - 32px));box-sizing:border-box;background:#fff;border-radius:16px;padding:22px 22px 20px;box-shadow:0 20px 60px rgba(0,0,0,.3);scroll-margin:24px}
   .camp-dialog h2{margin:0 0 8px;font-size:22px}
   .camp-dialog p{color:var(--soft);margin:0 0 14px;font-size:16px;line-height:1.5}
@@ -584,6 +599,14 @@
   </footer>
 </main>
 
+<div class="ia-box nascosto" id="ia-lavoro" aria-labelledby="ia-titolo">
+  <div class="ia-icona" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 3l2.1 5.9L18 11l-5.9 2.1L10 19l-2.1-5.9L2 11l5.9-2.1z"/><path d="M18.5 2l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/><path d="M18 15l.7 1.8 1.8.7-1.8.7L18 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg></div>
+  <h3 id="ia-titolo">L'IA sta abbinando il tuo computo al prezzario</h3>
+  <p class="ia-frase" id="ia-frase" role="status" aria-live="polite"></p>
+  <div class="ia-punti" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="ia-barra" id="ia-barra" role="progressbar" aria-label="Avanzamento dell'abbinamento" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="ia-barra-pieno"></div></div>
+  <div class="ia-conta" id="ia-conta"></div>
+</div>
 <div class="camp-velo nascosto" id="camp-velo"></div>
 <div class="camp-dialog nascosto" id="campione" role="dialog" aria-modal="true" aria-labelledby="camp-titolo" aria-describedby="camp-testo" tabindex="-1">
   <h2 id="camp-titolo">Il computo è stato letto bene?</h2>
@@ -1354,7 +1377,7 @@ async function caricaRegione(k){
   }
 }
 $("regioni").addEventListener("click", e=>{ const b = e.target.closest("[data-r]");
-  if(b && abbinaInCorso){ const st = $("stato-prezzario"); st.className = "stato"; st.textContent = "Aspetta un attimo: sto ancora abbinando le voci, poi puoi cambiare prezzario."; return; }
+  if(b && abbinaInCorso){ const st = $("stato-prezzario"); if(!st.dataset.prima){ st.dataset.prima = st.textContent; st.dataset.primaClasse = st.className; } st.className = "stato"; st.textContent = "Aspetta un attimo: sto ancora abbinando le voci, poi puoi cambiare prezzario."; return; }
   if(b){ caricaRegione(b.dataset.r); traccia("regione", {regione:PREZZARI[b.dataset.r] ? PREZZARI[b.dataset.r].nome : b.dataset.r}); } });
 
 function serveRegione(){
@@ -1500,12 +1523,18 @@ $("btn-abbina").addEventListener("click", async ()=>{
   }
   if(lette.length > MAX_VOCI_COMPUTO){ troppeVoci(lette.length, formato, righe, inizio); return; }
   const nuove = lette.map(r=>nuovaVoce({codice:r.codice, desc:r.desc, query:r.query, um:pulisciUM(r.um), capitolo:r.capitolo, misure:r.misure, origine:"computo"}));
-  if(nuove.length > SOGLIA_PEZZI){
-    const sc = $("stato-col"), bt = $("btn-abbina"), n = nuove.length.toLocaleString("it-IT");
-    abbinaInCorso = true; bt.disabled = true; sc.className = "stato";
-    try{ await abbinaTuttePezzi(nuove, x=>{ sc.textContent = `Abbino ${n} voci al prezzario… ${Math.round(x*100)}%`; }); }
-    finally{ abbinaInCorso = false; bt.disabled = false; }
-  }else abbinaTutte(nuove);
+  {
+    // schermata «IA al lavoro» per almeno ATTESA_MIN_MS; il lavoro vero gira come prima (a pezzi se il file è grande)
+    const sc = $("stato-col"), bt = $("btn-abbina"), n = nuove.length.toLocaleString("it-IT"), grande = nuove.length > SOGLIA_PEZZI;
+    abbinaInCorso = true; bt.disabled = true; sc.className = "stato"; sc.textContent = `L'IA sta abbinando ${n} voci al prezzario…`;
+    try{
+      mostraIA(nuove.length, grande);
+      await dopoDisegno();
+      if(grande) await abbinaTuttePezzi(nuove, x=>{ ia.reale = x; aggiornaIA(); sc.textContent = `Abbino ${n} voci al prezzario… ${Math.round(x*100)}%`; });
+      else abbinaTutte(nuove);
+      await attendiIA();
+    }finally{ nascondiIA(); abbinaInCorso = false; bt.disabled = false; }
+  }
   prev.push(...nuove); azzeraFiltro();
   $("stato-col").className="stato ok"; $("stato-col").textContent = msg + " Le trovi nel preventivo qui sotto.";
   traccia("computo_importato", {voci:nuove.length, formato,
@@ -1514,9 +1543,57 @@ $("btn-abbina").addEventListener("click", async ()=>{
   disegnaPreventivo(); salvaBozza();
   chiudiPannelli();
   $("p-prev").scrollIntoView({behavior:"smooth", block:"start"});
-  if(nuove.length > SOGLIA_PEZZI){ const f = ultimoFile; await dopoDisegno(); if(ultimoFile!==f) return; }   // prima la tabella, poi la finestra
+  { const f = ultimoFile; await dopoDisegno(); if(ultimoFile!==f) return; }   // prima la tabella, poi la finestra
   if(ultimoFile) valutaLettura(esitoLettura({formato, voci:nuove, righe, inizio, file:ultimoFile}));
 });
+
+/* ================= SCHERMATA «IA AL LAVORO» ================= */
+const ATTESA_MIN_MS = 5000;
+// i test la riducono con window.__ATTESA_MIN_MS (es. 0) oppure con ?test=1 nell'URL
+function attesaMin(){
+  const w = window.__ATTESA_MIN_MS;
+  if(typeof w==="number" && isFinite(w) && w>=0) return w;
+  try{ if(new URLSearchParams(location.search).get("test")==="1") return 300; }catch(e){}
+  return ATTESA_MIN_MS;
+}
+const ia = {t0:0, n:0, reale:null, durata:0, frase:-1, frasi:[], timer:null};
+function frasiIA(){
+  const pz = prezzario ? `${prezzario.regione} ${prezzario.edizione}` : "regionale";
+  return ["Leggo le voci del computo…", `Cerco ogni voce nel prezzario ${pz}…`, "Confronto descrizioni, codici e unità di misura…",
+    "Controllo le voci a corpo e quelle senza quantità…", "Preparo il riepilogo…"];
+}
+function aggiornaIA(){
+  const t = performance.now()-ia.t0;
+  const p = Math.max(0, Math.min(1, ia.reale!=null ? ia.reale : (ia.durata>400 ? t/(ia.durata-400) : 1)));   // 100% un attimo prima della fine
+  let k = Math.min(ia.frasi.length-1, Math.floor(t/1200));
+  if(ia.reale!=null && ia.reale<1) k = Math.min(k, ia.frasi.length-2);     // «Preparo il riepilogo» solo a lavoro finito
+  if(k!==ia.frase){ ia.frase = k; $("ia-frase").textContent = ia.frasi[k]; }
+  const pc = Math.round(p*100);
+  $("ia-barra-pieno").style.width = pc + "%"; $("ia-barra").setAttribute("aria-valuenow", pc);
+  $("ia-conta").textContent = `voce ${Math.round(p*ia.n).toLocaleString("it-IT")} di ${ia.n.toLocaleString("it-IT")}`;
+}
+function mostraIA(n, reale){
+  Object.assign(ia, {t0:performance.now(), n, reale: reale ? 0 : null, durata: attesaMin(), frase:-1, frasi: frasiIA()});
+  const box = $("ia-lavoro");
+  box.classList.remove("nascosto");
+  aggiornaIA();
+  const ancora = $("p-prev"), y = ancora.getBoundingClientRect().top + window.scrollY + 16;
+  const max = Math.max(16, document.documentElement.scrollHeight - box.offsetHeight - 16);
+  box.style.top = Math.max(16, Math.min(y, max)) + "px";
+  box.scrollIntoView({block:"center"});
+  clearInterval(ia.timer); ia.timer = setInterval(aggiornaIA, 100);
+}
+async function attendiIA(){
+  if(ia.reale!=null) ia.reale = 1;
+  const resto = ia.durata - (performance.now()-ia.t0);
+  if(resto>0) await new Promise(r=>setTimeout(r, resto));
+  aggiornaIA();
+}
+function nascondiIA(){
+  clearInterval(ia.timer); ia.timer = null; $("ia-lavoro").classList.add("nascosto");
+  const st = $("stato-prezzario");     // tolgo l'eventuale «Aspetta un attimo…» del cambio regione bloccato
+  if(st.dataset.prima){ st.textContent = st.dataset.prima; st.className = st.dataset.primaClasse; delete st.dataset.prima; delete st.dataset.primaClasse; }
+}
 
 /* troppe voci: non è un computo (elenco prezzi, prezzario intero). Non lo carico e propongo l'invio a ReporTech */
 function troppeVoci(n, formato, righe, inizio){
