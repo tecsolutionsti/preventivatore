@@ -594,7 +594,7 @@
     <input type="email" id="camp-email" autocomplete="email" placeholder="nome@impresa.it">
     <div class="camp-pulsanti" id="camp-azioni">
       <button type="button" class="btn btn-pieno" id="camp-si">Sì, mandalo a ReporTech</button>
-      <button type="button" class="btn btn-contorno" id="camp-no">No, continua</button>
+      <button type="button" class="btn btn-contorno" id="camp-no">No, abbino io</button>
     </div>
     <p class="camp-nota" id="camp-nota">Il file arriva solo a ReporTech e lo usiamo solo per addestrare il preventivatore.</p>
     <div class="stato" id="camp-stato" role="status"></div>
@@ -754,6 +754,32 @@ function abbinaTutte(voci){
   }
   sezioniPref = null;
 }
+/* file grandi: abbinamento a pezzi con pause, la pagina resta reattiva e mostra l'avanzamento.
+   Stesso ordine e stessi risultati di abbinaTutte. Oltre MAX_VOCI_COMPUTO non è un computo (elenco prezzi, prezzario intero). */
+const SOGLIA_PEZZI = 300, MAX_VOCI_COMPUTO = 1000, MAX_MB_LETTURA = 15, MAX_RIGHE_FOGLIO = 100000;
+let abbinaInCorso = false;
+const pausa = () => new Promise(r=>setTimeout(r,0));
+const dopoDisegno = () => new Promise(r=>{ let f = false; const via = ()=>{ if(!f){ f = true; setTimeout(r,0); } }; requestAnimationFrame(via); setTimeout(via,120); });
+async function abbinaTuttePezzi(voci, avanza){
+  if(voci.length<=SOGLIA_PEZZI){ abbinaTutte(voci); return; }
+  const giro = async (lista, pref, da, peso) => {
+    let t = performance.now();
+    for(let i=0;i<lista.length;i++){
+      sezioniPref = pref; abbinaVoce(lista[i]); sezioniPref = null;
+      if(performance.now()-t > 40){ if(avanza) avanza(da + peso*(i+1)/lista.length); await pausa(); t = performance.now(); }
+    }
+  };
+  sezioniPref = null;
+  await giro(voci, null, 0, 0.6);
+  const sicure = voci.filter(v=>v.candidati && v.scelto>=0 && (["codice","alias"].includes(v.candidati[v.scelto].tipo) || v.candidati[v.scelto].score>=1.5));
+  if(sicure.length>=5){
+    const conta = new Map();
+    sicure.forEach(v=>{ const s = sezioneDi(prezzario.voce(v.candidati[v.scelto].i)[0]); conta.set(s,(conta.get(s)||0)+1); });
+    const pref = new Map([...conta].map(([k,n])=>[k,n/sicure.length]));
+    await giro(voci.filter(v=>!(v.candidati && v.scelto>=0 && ["codice","alias"].includes(v.candidati[v.scelto].tipo))), pref, 0.6, 0.4);
+  }
+  if(avanza) avanza(1);
+}
 
 function cerca(desc, um){
   const P = prezzario, punteggi = new Map();
@@ -812,6 +838,7 @@ $("file").addEventListener("change",e=>{ if(e.target.files[0]) leggiFile(e.targe
 let ultimoFile = null, ultimoBuffer = null;   // ultimo file caricato e i suoi byte (per l'invio del campione)
 function leggiFile(f){
   const st = $("stato-file");
+  if(abbinaInCorso){ st.className = "stato"; st.textContent = "Aspetta un attimo: sto ancora abbinando le voci del file precedente."; return; }
   ultimoFile = f; ultimoBuffer = null;
   chiudiCampione();
   if(!/\.(xlsx|xlsm|xls|ods|csv)$/i.test(f.name)){
@@ -822,6 +849,15 @@ function leggiFile(f){
     apriInvio("computo", f, "file_non_excel");
     return;
   }
+  if(f.size > MAX_MB_LETTURA*1024*1024){
+    // file enorme: la lettura nel browser bloccherebbe la pagina
+    st.className="stato err"; st.textContent = `${f.name} pesa ${peso(f.size)}: per la demo è troppo grande (massimo ${MAX_MB_LETTURA} MB). Mandacelo qui sotto e lo importiamo noi.`;
+    $("p3").classList.add("spento");
+    traccia("excel_troppo_grande", {nome:f.name, mb:mb(f.size)});
+    apriInvio("computo", f, "troppe_voci");
+    return;
+  }
+  st.className="stato"; st.textContent = `Apro ${f.name}…`;
   const rd = new FileReader();
   rd.onload = ev=>{
     ultimoBuffer = ev.target.result;
@@ -849,7 +885,24 @@ function leggiFile(f){
 
 function righeFoglio(i){
   const ws = workbook.Sheets[workbook.SheetNames[i]];
-  return XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:true});
+  const range = rangeUtile(ws);
+  return XLSX.utils.sheet_to_json(ws, range ? {header:1,defval:"",raw:true,range} : {header:1,defval:"",raw:true});
+}
+// area !ref gonfiata (es. A1:XFD1048576 per una formattazione): la riduco alle celle con dati, così non creo milioni di celle vuote
+function rangeUtile(ws){
+  if(!ws || !ws["!ref"]) return null;
+  if(ws.__range!==undefined) return ws.__range;
+  const r = XLSX.utils.decode_range(ws["!ref"]);
+  const nR = r.e.r-r.s.r+1, nC = r.e.c-r.s.c+1;
+  let ris = null;
+  if(nR*nC > 300000 || nC > 200 || nR > MAX_RIGHE_FOGLIO){
+    let maxR = r.s.r, maxC = r.s.c;
+    for(const k in ws){ if(k[0]==="!") continue; const a = XLSX.utils.decode_cell(k); if(a.r>maxR) maxR = a.r; if(a.c>maxC) maxC = a.c; }
+    maxR = Math.min(maxR, r.e.r, r.s.r+MAX_RIGHE_FOGLIO-1); maxC = Math.min(maxC, r.e.c);
+    if(maxR<r.e.r || maxC<r.e.c) ris = {s:{r:r.s.r, c:r.s.c}, e:{r:maxR, c:maxC}};
+  }
+  try{ Object.defineProperty(ws, "__range", {value:ris, enumerable:false, configurable:true}); }catch(e){}
+  return ris;
 }
 
 const RICONOSCI = {
@@ -1282,8 +1335,15 @@ async function caricaRegione(k){
     st.className = "stato ok";
     st.textContent = `Prezzario ${prezzario.regione} ${prezzario.edizione} pronto: ${prezzario.N.toLocaleString("it-IT")} voci. Fonte: ${prezzario.fonte||""}`;
     $("titolo-pz").textContent = `${prezzario.regione} ${prezzario.edizione}`;
-    // le voci arrivate dal computo vengono riabbinate al nuovo prezzario
-    abbinaTutte(prev.filter(v=>v.origine==="computo"));
+    // le voci arrivate dal computo vengono riabbinate al nuovo prezzario (a pezzi se sono tante)
+    const daRiabbinare = prev.filter(v=>v.origine==="computo");
+    if(daRiabbinare.length>SOGLIA_PEZZI){
+      const pronto = st.textContent;
+      abbinaInCorso = true; $("btn-abbina").disabled = true;
+      try{ await abbinaTuttePezzi(daRiabbinare, x=>{ st.textContent = `Riabbino ${daRiabbinare.length.toLocaleString("it-IT")} voci al nuovo prezzario… ${Math.round(x*100)}%`; }); }
+      finally{ abbinaInCorso = false; $("btn-abbina").disabled = false; }
+      st.textContent = pronto;
+    }else abbinaTutte(daRiabbinare);
     disegnaPreventivo();
     if($("pannello-prezzario").classList.contains("aperto")) apriNodo(-1);
     return true;
@@ -1293,7 +1353,9 @@ async function caricaRegione(k){
     return false;
   }
 }
-$("regioni").addEventListener("click", e=>{ const b = e.target.closest("[data-r]"); if(b){ caricaRegione(b.dataset.r); traccia("regione", {regione:PREZZARI[b.dataset.r] ? PREZZARI[b.dataset.r].nome : b.dataset.r}); } });
+$("regioni").addEventListener("click", e=>{ const b = e.target.closest("[data-r]");
+  if(b && abbinaInCorso){ const st = $("stato-prezzario"); st.className = "stato"; st.textContent = "Aspetta un attimo: sto ancora abbinando le voci, poi puoi cambiare prezzario."; return; }
+  if(b){ caricaRegione(b.dataset.r); traccia("regione", {regione:PREZZARI[b.dataset.r] ? PREZZARI[b.dataset.r].nome : b.dataset.r}); } });
 
 function serveRegione(){
   if(prezzario) return false;
@@ -1391,7 +1453,8 @@ function abbinaVoce(r){
   if(r.memIA && !r.memIA.codice) r.scelto = -1;
 }
 
-$("btn-abbina").addEventListener("click", ()=>{
+$("btn-abbina").addEventListener("click", async ()=>{
+  if(abbinaInCorso) return;
   const c = k => $("col-"+k).value===""? -1 : +$("col-"+k).value;
   const col = {codice:c("codice"), desc:c("desc"), um:c("um"), qta:c("qta")};
   if(col.desc<0 || col.qta<0){
@@ -1435,8 +1498,14 @@ $("btn-abbina").addEventListener("click", ()=>{
     if(ultimoFile) apriInvio("computo", ultimoFile, "computo_non_letto");
     return;
   }
+  if(lette.length > MAX_VOCI_COMPUTO){ troppeVoci(lette.length, formato, righe, inizio); return; }
   const nuove = lette.map(r=>nuovaVoce({codice:r.codice, desc:r.desc, query:r.query, um:pulisciUM(r.um), capitolo:r.capitolo, misure:r.misure, origine:"computo"}));
-  abbinaTutte(nuove);
+  if(nuove.length > SOGLIA_PEZZI){
+    const sc = $("stato-col"), bt = $("btn-abbina"), n = nuove.length.toLocaleString("it-IT");
+    abbinaInCorso = true; bt.disabled = true; sc.className = "stato";
+    try{ await abbinaTuttePezzi(nuove, x=>{ sc.textContent = `Abbino ${n} voci al prezzario… ${Math.round(x*100)}%`; }); }
+    finally{ abbinaInCorso = false; bt.disabled = false; }
+  }else abbinaTutte(nuove);
   prev.push(...nuove); azzeraFiltro();
   $("stato-col").className="stato ok"; $("stato-col").textContent = msg + " Le trovi nel preventivo qui sotto.";
   traccia("computo_importato", {voci:nuove.length, formato,
@@ -1445,8 +1514,22 @@ $("btn-abbina").addEventListener("click", ()=>{
   disegnaPreventivo(); salvaBozza();
   chiudiPannelli();
   $("p-prev").scrollIntoView({behavior:"smooth", block:"start"});
+  if(nuove.length > SOGLIA_PEZZI){ const f = ultimoFile; await dopoDisegno(); if(ultimoFile!==f) return; }   // prima la tabella, poi la finestra
   if(ultimoFile) valutaLettura(esitoLettura({formato, voci:nuove, righe, inizio, file:ultimoFile}));
 });
+
+/* troppe voci: non è un computo (elenco prezzi, prezzario intero). Non lo carico e propongo l'invio a ReporTech */
+function troppeVoci(n, formato, righe, inizio){
+  const sc = $("stato-col");
+  sc.className = "stato err";
+  sc.textContent = `Questo file ha ${n.toLocaleString("it-IT")} voci: sembra un elenco prezzi o un prezzario intero, non un computo metrico. La demo importa computi fino a ${MAX_VOCI_COMPUTO.toLocaleString("it-IT")} voci, quindi non l'ho caricato nel preventivo. Mandacelo e lo importiamo noi.`;
+  traccia("computo_troppo_grande", {nome: ultimoFile ? ultimoFile.name : "", voci:n, formato});
+  if(!ultimoFile) return;
+  const e = esitoLettura({formato, voci:[], righe, inizio, file:ultimoFile});
+  Object.assign(e, {voci:n, quota_lette: e.righe_utili ? Math.round(n/e.righe_utili*1000)/1000 : null, senza_voce:n, abbinate:0});
+  valutaLettura(e);
+  if(!campioneAperto) apriInvio("computo", ultimoFile, "troppe_voci");
+}
 
 /* ================= PREVENTIVO: DISEGNO ================= */
 const nf = n => (isFinite(n)?n:0).toLocaleString("it-IT",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -2363,6 +2446,7 @@ function apriInvio(dove, file, motivo){
   if(motivo && !$("inv-note").value){
     if(motivo==="computo_non_letto") $("inv-note").value = "La demo non ha trovato le voci in questo file.";
     if(motivo==="excel_illeggibile") $("inv-note").value = "La demo non è riuscita ad aprire questo file.";
+    if(motivo==="troppe_voci") $("inv-note").value = "File troppo grande per la demo: sembra un elenco prezzi, non un computo.";
   }
   if(regioneScelta && PREZZARI[regioneScelta] && !$("inv-regione").value) $("inv-regione").value = PREZZARI[regioneScelta].nome;
   precompilaEmail();
@@ -2519,7 +2603,7 @@ function posizionaCampione(){
   box.style.top = Math.max(16, Math.min(y, max)) + "px";
 }
 let statoAperto = "";
-const TESTO_BUONA = "Possiamo fare ancora meglio. Se ci lasci questo file, addestriamo l'IA a leggere e abbinare i computi come il tuo con più precisione. Ce lo lasci?";
+const TESTO_BUONA = "Possiamo fare ancora meglio. Se ci lasci questo file, addestriamo l'IA a leggere e abbinare con più precisione i computi come il tuo, e ti ricontattiamo quando è pronto. Oppure abbina tu le voci a mano: l'IA impara dalle tue scelte e, la prossima volta che carichi questo computo, se le ricorda.";
 const TESTO_SCARSA = "Se ci lasci questo file, insegniamo all'IA a leggerlo e ti scriviamo quando funziona. Ce lo lasci?";
 function pillole(e){
   const n = e.conteggi || {}, righe = [
