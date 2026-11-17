@@ -98,6 +98,11 @@
   .badge.nessuna{background:#FDECEA;color:var(--rosso)}
   .badge.ia{background:var(--verde);color:#fff}
   .badge.ia .esito{font-weight:600;opacity:.95}
+  /* badge Abbinamento IA: stessi colori delle pillole della legenda (.chip.verde/.giallo/.rosso/.corpo) */
+  .badge.ia-ok{background:var(--verde-bg);color:var(--verde)}
+  .badge.ia-var{background:var(--giallo-bg);color:var(--giallo)}
+  .badge.ia-no{background:#FDECEA;color:var(--rosso)}
+  .badge.ia-corpo{background:#FFF4DB;color:#7A4B00;box-shadow:inset 0 0 0 1px #F0D590}
   .match .note-ia{font-size:11.5px;color:var(--soft);margin:2px 0 5px;max-width:330px;line-height:1.35}
   .match .note-ia b{color:var(--testo);font-weight:600}
   .match .msg-ia{font-size:12.5px;color:var(--rosso);font-weight:600;margin-top:4px;max-width:330px}
@@ -1920,7 +1925,7 @@ function htmlMatchBase(v){
     return `<span class="${cls}">${fonte}</span>${rif}`;
   }
   if(!prezzario) return `<span class="badge neutro">Scegli il prezzario per l'abbinamento</span>`;
-  if(!v.candidati || !v.candidati.length)
+  if((!v.candidati || !v.candidati.length) && !(v.memIA && !v.memIA.codice))   // ✗ dalla memoria IA: badge e note IA anche senza candidati
     return `<span class="badge nessuna">${v.codiceMancante?"Codice non presente in questa edizione":"Nessuna voce trovata"}</span><select class="sel-cand" data-f="cand"><option value="-1" selected>Nessuna voce abbinata</option>${OPT_PZ}</select><div class="testo-voce">Scrivi tu il prezzo o scegli la voce dal prezzario.</div>`;
   const c = v.scelto>=0 ? v.candidati[v.scelto] : null;
   const m = v.memIA;
@@ -1928,7 +1933,7 @@ function htmlMatchBase(v){
     const esito = m.fonte==="appresa" ? "scelta tua, ricordata" : m.esito==="✓" ? "✓ voce giusta" : m.esito==="≈" ? "≈ da controllare" : "✗ non presente nel prezzario";
     const titolo = m.fonte==="appresa" ? "Abbinamento ricordato" : "Abbinamento IA";
     const note = m.motivo ? `<div class="note-ia"><b>Note IA:</b> ${esc(m.motivo)}</div>` : "";
-    const optsM = v.candidati.map((cc,j)=>{ const p = prezzario.voce(cc.i);
+    const optsM = (v.candidati||[]).map((cc,j)=>{ const p = prezzario.voce(cc.i);
       if(cc.tipo==="memoria") return `<option value="${j}" ${j===v.scelto?"selected":""}>${esc(m.codice)} · ${esc((m.testo||p[4]).slice(0,55))} · ${esc(m.um||p[2])} · ${m.prezzo!=null?nf(m.prezzo)+" €":"—"}</option>`;
       return `<option value="${j}" ${j===v.scelto?"selected":""}>${esc(p[0])} · ${esc(p[4].slice(0,55))} · ${esc(p[2])} · ${nf(p[3])} €</option>`; }).join("")
       + `<option value="-1" ${v.scelto===-1?"selected":""}>Nessuna di queste</option>` + OPT_PZ;
@@ -1942,7 +1947,10 @@ function htmlMatchBase(v){
         + (r==null ? `<div class="testo-voce" style="color:var(--giallo)">Voce in percentuale: calcola tu l'importo.</div>`
                    : `<div class="rif">${conv?"Prezzo calcolato":"Prezzo prezzario"} <b>${nf(r)} €</b> / ${esc(m.um||p[2])} <button class="btn-link" data-act="usa">Usa questo</button></div>`);
     }
-    return `<span class="badge ia">${titolo} · <span class="esito">${esc(esito)}</span></span>${note}<select class="sel-cand" data-f="cand">${optsM}</select>${corpoM}`;
+    const corpo = categoriaVoce(v)==="corpo";
+    const clsIA = m.fonte==="appresa" ? "ia" : corpo ? "ia-corpo" : m.esito==="✓" ? "ia-ok" : m.esito==="≈" ? "ia-var" : "ia-no";
+    const esitoV = corpo && m.fonte!=="appresa" ? (m.esito==="✓"||m.esito==="≈" ? "⚠ a corpo · "+esito : "⚠ a corpo, il prezzo lo decidi tu") : esito;
+    return `<span class="badge ${clsIA}">${titolo} · <span class="esito">${esc(esitoV)}</span></span>${note}<select class="sel-cand" data-f="cand">${optsM}</select>${corpoM}`;
   }
   const badge = !c ? `<span class="badge nessuna">Nessuna voce scelta</span>`
     : c.tipo==="manuale" ? `<span class="badge manuale">Scelta da te</span>`
