@@ -11,6 +11,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+/* Modalità embed: la pagina madre (reportech.app/preventivatore-edile) ha già logo, titolo e introduzione.
+   Attiva con ?embed=1, oppure dentro un iframe la cui pagina madre è su reportech.app o webflow.io.
+   ?embed=0 la spegne sempre. Pagina aperta da sola e altri iframe (Wix): nessun cambiamento. */
+(function(){
+  var embed = false;
+  try{
+    var p = new URLSearchParams(location.search).get("embed");
+    if(p === "1") embed = true;
+    else if(p !== "0"){
+      var dentro; try{ dentro = window.self !== window.top; }catch(e){ dentro = true; }
+      if(dentro){
+        var madre = "";
+        try{ if(location.ancestorOrigins && location.ancestorOrigins.length) madre = location.ancestorOrigins[0]; }catch(e){}
+        if(!madre) madre = document.referrer || "";
+        var host = ""; try{ host = new URL(madre).hostname.toLowerCase(); }catch(e){}
+        embed = /(^|\.)reportech\.app$/.test(host) || /(^|\.)webflow\.io$/.test(host);
+      }
+    }
+  }catch(e){}
+  window.RT_EMBED = embed;
+  if(embed) document.documentElement.classList.add("rt-embed");
+})();
+</script>
 <style>
   :root{
     --blu:#1A56A0; --blu-scuro:#0D2D5E; --bianco:#FFFFFF;
@@ -30,6 +54,8 @@
   .avviso .wrap{padding-top:12px;padding-bottom:12px}
   .avviso strong{color:#fff}
   .intro{padding:28px 0 8px}
+  /* modalità embed: niente intestazione, fascia blu e introduzione (le ha già la pagina madre) */
+  html.rt-embed body > header, html.rt-embed .avviso, html.rt-embed .intro{display:none}
   .intro p{color:var(--soft);max-width:760px;margin:0}
   .passo{background:var(--bianco);border:1px solid var(--bordo);border-radius:14px;padding:20px;margin:18px 0}
   .passo-titolo{display:flex;align-items:center;gap:12px;margin-bottom:12px}
@@ -381,6 +407,7 @@
   <section class="passo" id="p1">
     <div class="passo-titolo"><div class="num">1</div><h2>Scegli il prezzario regionale</h2></div>
     <div class="regioni" id="regioni"></div>
+    <p class="nota-mem">Versione dimostrativa con 7 prezzari regionali. Con ReporTech sono disponibili i prezzari di tutte le regioni italiane.</p>
     <div class="stato" id="stato-prezzario">Nessun prezzario scelto. Serve per importare un computo o scegliere le voci dal prezzario.</div>
   </section>
 
@@ -499,7 +526,7 @@
 
     <div class="nascosto" id="prev-contenuto">
       <div class="riassunto" id="riassunto"></div>
-      <div class="nota-impara" id="nota-impara"><b>La pagina impara dalle tue scelte.</b> Quando confermi una voce o ne scegli un'altra dall'elenco, se la ricorda: nel prossimo computo una lavorazione descritta allo stesso modo viene abbinata subito come hai deciso tu. Nella prova gratuita le scelte restano solo in questo browser. Nella versione completa restano nell'archivio della tua impresa, a disposizione di tutto l'ufficio.</div>
+      <div class="nota-impara" id="nota-impara"><b>La pagina impara dalle tue scelte.</b> Quando confermi una voce o ne scegli un'altra dall'elenco, se la ricorda: nel prossimo computo una lavorazione descritta allo stesso modo viene abbinata subito come hai deciso tu. Nella versione dimostrativa le scelte restano solo in questo browser. Nella versione completa restano nell'archivio della tua impresa, a disposizione di tutto l'ufficio.</div>
       <div class="azioni" style="margin:0 0 12px">
         <button class="btn btn-contorno btn-mini" id="btn-copia-tutti">Usa il prezzo del prezzario dove il prezzo è vuoto</button>
         <span class="msg-corpo nascosto" id="msg-corpo" role="status"></span>
@@ -2641,7 +2668,11 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzR9WpU1OpsI2VC
 const WHATSAPP_URL = "https://wa.me/393939247176?text=" + encodeURIComponent("Buongiorno, ho provato il preventivatore ReporTech e vorrei mandarvi un computo.");
 const TYPEFORM_ID = "ltpsjxe6";
 // Il pulsante apre il modulo Typeform in una finestra sopra la pagina (iframe semplice, senza librerie esterne).
-const TYPEFORM_URL = "https://form.typeform.com/to/"+TYPEFORM_ID+"?typeform-medium=preventivatore-demo&typeform-embed=popup-blank";
+// In modalità embed (pagina reportech.app/preventivatore-edile) aggiungo il campo nascosto «pagina»:
+// Typeform lo legge dal frammento (#) e, nei moduli che lo prevedono, dalla query; lo metto in entrambi.
+const TYPEFORM_PAGINA = window.RT_EMBED ? "preventivatore-edile" : "";
+const TYPEFORM_URL = "https://form.typeform.com/to/"+TYPEFORM_ID+"?typeform-medium=preventivatore-demo&typeform-embed=popup-blank"
+  + (TYPEFORM_PAGINA ? "&pagina="+TYPEFORM_PAGINA+"#pagina="+TYPEFORM_PAGINA : "");
 const DENTRO_IFRAME = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
 $("tf-nuova").href = TYPEFORM_URL.replace("popup-blank","new-tab");
 function apriDemo(ev){
